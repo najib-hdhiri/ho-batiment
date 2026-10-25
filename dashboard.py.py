@@ -26,7 +26,7 @@ if not st.session_state.authentifie:
         nom_utilisateur = st.text_input("اسم المستخدم:")
         mot_de_passe = st.text_input("كلمة السر:", type="password")
         if st.button("دخول"):
-            if nom_utilisateur in utilisateurs and utilisateurs[nom_utilisateur]["mot_de_passe"] == mot_de_passe:
+        if nom_utilisateur.strip() in utilisateurs and utilisateurs[nom_utilisateur]["mot_de_passe"] == mot_de_passe.strip():
                 st.session_state.authentifie = True
                 st.session_state.utilisateur = nom_utilisateur
                 st.rerun()
