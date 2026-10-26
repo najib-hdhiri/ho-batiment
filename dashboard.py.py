@@ -82,18 +82,12 @@ st.sidebar.markdown(f"<p class='brand-subtitle'>مرحباً: {st.session_state.
 if st.sidebar.button("خروج (Déconnexion)"):
     st.session_state.authentifie = False
     st.rerun()
-
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-# القائمة الرئيسية المدمجة لكل تفاصيل الشانطي
-menu = st.sidebar.radio("اختر القسم:", [
-    "🏠 الرئيسية والمشاريع", 
-    "📅 الكالندري (12 شهراً ونهار أصفر)", 
-    "👷 إدارة الخدامة والڤستات والصور", 
-    "📊 تقدم الأشغال (Avancement)"
-])
-
+# ==========================================
+# بيانات المشاريع
+# ==========================================
 projet_choisi = st.sidebar.selectbox("📂 اختر المشروع:", [
     "LOT 2 - KHALIJ CHAARA",
     "LOT 1 - BOUKHROUF"
@@ -103,110 +97,107 @@ objectifs_projets = {
     "LOT 2 - KHALIJ CHAARA": {
         "date_debut": date(2026, 5, 18),
         "articles": {
-            "Bordure T2": {"objectif": 7700.0, "unite": "ml"},
-            "Bordure Mince P2": {"objectif": 7250.0, "unite": "ml"},
-            "Caniveau CS2": {"objectif": 7700.0, "unite": "ml"},
-            "Caniveau CC2": {"objectif": 500.0, "unite": "ml"},
-            "Pavé autobloquant": {"objectif": 15500.0, "unite": "م²"},
+            "Bordure T2": {"nom_csv": "bordure t2", "objectif": 7700.0, "unite": "ml"},
+            "Bordure Mince P2": {"nom_csv": "bordure mince", "objectif": 7250.0, "unite": "ml"},
+            "Caniveau CS2": {"nom_csv": "caniveau central cs2", "objectif": 7700.0, "unite": "ml"},
+            "Caniveau CC2": {"nom_csv": "caniveau central cc2", "objectif": 500.0, "unite": "ml"},
+            "Pavé autobloquant": {"nom_csv": "pave autobloquant", "objectif": 15500.0, "unite": "م²"},
         }
     },
     "LOT 1 - BOUKHROUF": {
         "date_debut": date(2026, 6, 1),
         "articles": {
-            "A.01 Double cloison 0.35m": {"objectif": 1450.0, "unite": "م²"},
-            "A.02 Double cloison 0.30m": {"objectif": 110.0, "unite": "م²"},
+            "A.01 Double cloison 0.35m": {"nom_csv": "double cloison 0,35 m", "objectif": 1450.0, "unite": "م²"},
+            "A.02 Double cloison 0.30m": {"nom_csv": "double cloison 0,30 m", "objectif": 110.0, "unite": "م²"},
         }
     }
 }
-
 p_conf = objectifs_projets[projet_choisi]
 
 # ==========================================
-# محتوى الأقسام
+# القائمة الرئيسية ومحتوى الأقسام
 # ==========================================
+menu = st.sidebar.radio("اختر القسم:", [
+    "🏠 الرئيسية والمشاريع", 
+    "📅 الكالندري (12 شهراً)", 
+    "👷 إدارة الخدامة (الصور والڤستات)", 
+    "📊 تقدم الأشغال (Avancement)"
+])
+
 if menu == "🏠 الرئيسية والمشاريع":
     st.title("🏗️ لوحة تحكم H.O Bâtiment")
     st.success(f"تم اختيار المشروع بنجاح: **{projet_choisi}**")
-    st.info("النظام جاهز لمتابعة الشانطي، الكالندري السنوية، والخدامة.")
-    
     st.markdown("### 📋 ملخص بنود الأشغال للمشروع:")
     for art, info in p_conf["articles"].items():
         st.write(f"- **{art}**: الهدف الجملي = {info['objectif']} {info['unite']}")
 
-elif menu == "📅 الكالندري (12 شهراً ونهار أصفر)":
-    st.title("📅 جدول الأعمال والتخطيط السنوي (12 شهراً)")
-    
-    mois_liste = [
-        "يناير (01)", "فبراير (02)", "مارس (03)", "أبريل (04)",
-        "ماي (05)", "جوان (06)", "جولية (07)", "أوت (08)",
-        "سبتمبر (09)", "أكتوبر (10)", "نوفمبر (11)", "ديسمبر (12)"
-    ]
-    
+elif menu == "📅 الكالندري (12 شهراً)":
+    st.title("📅 التخطيط السنوي ودفتر الورشة")
+    mois_liste = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
     mois_choisi = st.selectbox("اختر الشهر:", mois_liste)
     
     col1, col2 = st.columns(2)
     with col1:
         jour_num = st.number_input("اليوم:", min_value=1, max_value=31, value=1)
     with col2:
-        statut_jour = st.selectbox("حالة اليوم في الشانطي:", ["خدمة عادية (Normal)", "🟡 يوم أصفر (توقف عن العمل / مشكلة)"])
+        statut_jour = st.selectbox("حالة اليوم:", ["خدمة عادية", "🟡 يوم أصفر (توقف/مشكلة)"])
     
-    note_jour = st.text_area(f"تسجيل ملاحظات أو أعمال ليوم {jour_num} في شهر {mois_choisi}:")
+    note_jour = st.text_area("ملاحظات الأعمال أو أسباب التوقف:")
     
-    if statut_jour == "🟡 يوم أصفر (توقف عن العمل / مشكلة)":
-        st.error("⚠️ تنبيه: تم تسجيل يوم توقف (Jour Jaune) لهذا اليوم في الشانطي!")
+    if statut_jour == "🟡 يوم أصفر (توقف/مشكلة)":
+        st.warning("⚠️ تم تسجيل هذا اليوم كـ 'يوم أصفر' بسبب توقف الأشغال.")
         
-    if st.button("حفظ حالة اليوم"):
-        st.success(f"تم تسجيل بيانات شهر {mois_choisi} (اليوم {jour_num}) بنجاح للمشروع {projet_choisi}!")
+    if st.button("حفظ اليوم"):
+        st.success(f"تم حفظ بيانات يوم {jour_num} {mois_choisi} بنجاح.")
 
-elif menu == "👷 إدارة الخدامة والڤستات والصور":
-    st.title("👷 إدارة الخدامة، الصور، والڤستات (Gilets)")
+elif menu == "👷 إدارة الخدامة (الصور والڤستات)":
+    st.title("👷 إدارة فريق العمل")
     
-    # قائمة الخدامة مع الڤستات الافتراضية
-    ouvriers_data = [
-        {"nom": "محمد العياري", "gilet": "أصفر (رئيس فريق)", "photo": "https://img.icons8.com/color/96/user-male-circle--v1.png"},
-        {"nom": "علي بن صالح", "gilet": "برتقالي (عامل)", "photo": "https://img.icons8.com/color/96/user-male-circle--v1.png"},
-        {"nom": "صابر الشارني", "gilet": "أخضر (مراقب)", "photo": "https://img.icons8.com/color/96/user-male-circle--v1.png"}
+    ouvriers = [
+        {"nom": "محمد العياري", "gilet": "أصفر (رئيس فريق)", "img": "https://img.icons8.com/color/96/worker-male.png"},
+        {"nom": "علي بن صالح", "gilet": "برتقالي (عامل)", "img": "https://img.icons8.com/color/96/worker-male.png"},
+        {"nom": "صابر الشارني", "gilet": "أخضر (مراقب)", "img": "https://img.icons8.com/color/96/worker-male.png"}
     ]
     
-    for ouv in ouvriers_data:
+    for ouv in ouvriers:
         c1, c2, c3 = st.columns([1, 2, 2])
         with c1:
-            st.image(ouv["photo"], width=50)
+            st.image(ouv["img"], width=60)
         with c2:
-            st.write(f"**{ouv['nom']}**")
+            st.markdown(f"**{ouv['nom']}**")
         with c3:
-            st.write(f"🦺 الڤست: {ouv['gilet']}")
+            st.write(f"🦺 {ouv['gilet']}")
         st.markdown("---")
         
-    st.subheader("💰 حساب الخلاص والأيام")
-    ouv_sel = st.selectbox("اختر العامل للخلاص:", [o["nom"] for o in ouvriers_data])
-    jours = st.number_input("عدد الأيام المنجزة:", min_value=0.0, step=0.5)
+    st.subheader("💰 تسجيل الخلاص")
+    ouv_sel = st.selectbox("العامل:", [o["nom"] for o in ouvriers])
+    jours = st.number_input("أيام العمل:", min_value=0.0, step=0.5)
     salaire = st.number_input("الأجرة اليومية (د.ت):", min_value=0.0, value=50.0)
     
-    total = jours * salaire
-    st.write(f"💵 **المبلغ الجملي للخلاص:** {total} د.ت")
-    if st.button("حفظ الخلاص"):
-        st.success(f"تم تسجيل خلاص العامل {ouv_sel} بقيمة {total} د.ت بنجاح!")
+    if st.button("تأكيد الخلاص"):
+        st.success(f"تم تسجيل خلاص {ouv_sel}: {jours * salaire} د.ت")
 
 elif menu == "📊 تقدم الأشغال (Avancement)":
-    st.title("📊 متابعة تقدم الأشغال (Par Jour / Semaine / Totale)")
+    st.title("📊 متابعة تقدم الأشغال")
     
+    # جلب الـ Articles الخاصة بالمشروع المختار فقط
     articles_dispos = list(p_conf["articles"].keys())
-    art_sel = st.selectbox("اختر بند الأشغال (Article):", articles_dispos)
+    art_sel = st.selectbox("اختر الـ Article:", articles_dispos)
+    unite_art = p_conf["articles"][art_sel]["unite"]
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        av_j = st.number_input("التقدم اليومي (%):", 0.0, 100.0)
+        av_j = st.number_input(f"تقدم يومي ({unite_art}):", min_value=0.0)
     with col2:
-        av_s = st.number_input("التقدم الأسبوعي (%):", 0.0, 100.0)
+        av_s = st.number_input(f"تقدم أسبوعي ({unite_art}):", min_value=0.0)
     with col3:
-        av_t = st.number_input("التقدم الإجمالي (%):", 0.0, 100.0)
+        av_t = st.number_input(f"تقدم إجمالي ({unite_art}):", min_value=0.0)
         
     st.markdown("---")
     m1, m2, m3 = st.columns(3)
-    m1.metric("يومي (Par Jour)", f"{av_j}%")
-    m2.metric("أسبوعي (Par Semaine)", f"{av_s}%")
-    m3.metric("إجمالي (Totale)", f"{av_t}%")
+    m1.metric("اليومي", f"{av_j} {unite_art}")
+    m2.metric("الأسبوعي", f"{av_s} {unite_art}")
+    m3.metric("الإجمالي", f"{av_t} {unite_art}")
     
-    if st.button("حفظ نسب الإنجاز"):
-        st.success(f"تم حفظ نسب التقدم للـ Article '{art_sel}' بنجاح!")
+    if st.button("تسجيل التقدم"):
+        st.success(f"تم حفظ نسب التقدم للـ Article: {art_sel}")
