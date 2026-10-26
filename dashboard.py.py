@@ -1,13 +1,12 @@
 import streamlit as st
 import calendar
-from datetime import date, datetime
+from datetime import date
 import os
-import csv
 
 st.set_page_config(page_title="H.O Construction - Tableau de Bord", page_icon="🏗️", layout="wide")
 
 # ==========================================
-# تصميم CSS فخم ومنظم للواجهة
+# تصميم CSS فخم ومنظم للملفات واللوغو
 # ==========================================
 st.markdown("""
     <style>
@@ -31,21 +30,26 @@ st.markdown("""
         margin-top: 2px;
         margin-bottom: 0;
     }
+    .img-box {
+        border-radius: 10px;
+        border: 2px solid #ddd;
+        padding: 5px;
+        margin-bottom: 10px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-DOSSIER = os.path.dirname(os.path.abspath(__file__))
-FICHIER_CHANTIER = os.path.join(DOSSIER, "journal_chantier.csv")
-FICHIER_INCIDENTS = os.path.join(DOSSIER, "journal_perturbations.csv")
-
+# Ensina ennou dossier uploads mawjoud w yconservi kol chay
 os.makedirs("uploads", exist_ok=True)
 
-# جلب لوجو الشركة
+# Loouj 3al logo mel dossier direct
 logo_path = None
-for p in ["uploads/logo_saved.jpg", "logo.jpg", "logo.png"]:
-    if os.path.exists(p):
-        logo_path = p
-        break
+if os.path.exists("uploads/logo_saved.jpg"):
+    logo_path = "uploads/logo_saved.jpg"
+elif os.path.exists("logo.jpg"):
+    logo_path = "logo.jpg"
+elif os.path.exists("logo.png"):
+    logo_path = "logo.png"
 
 st.sidebar.markdown('<div class="brand-container">', unsafe_allow_html=True)
 if logo_path:
@@ -58,124 +62,114 @@ st.sidebar.markdown("<p class='brand-subtitle'>Construction & Travaux Publics</p
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-# اختيار المشروع
 projet_choisi = st.sidebar.selectbox("📂 اختر المشروع:", [
-    "LOT 2 - KHALIJ CHAARA",
-    "LOT 1 - BOUKHROUF"
+    "خليج الشعرة (Khalij Chaara)", 
+    "بوخروف (Boukharouf)"
 ])
 
-# ==========================================
-# الأهداف التعاقدية ومعطيات المشاريع
-# ==========================================
-objectifs_projets = {
-    "LOT 2 - KHALIJ CHAARA": {
+base_donnees_projets = {
+    "خليج الشعرة (Khalij Chaara)": {
         "date_debut": date(2026, 5, 18),
+        "stats": {"vert": 65, "jaune": 44, "gris": 12, "meteo": 8, "conge": 5},
+        "jours": {
+            "2026-05-18": {"etat": "vert", "details": {"travail": "انطلاق الشانطي ووضع البوردور T2"}},
+            "2026-05-19": {"etat": "jaune", "details": {"probleme": "أرضية غير مهيئة"}},
+            "2026-05-26": {"etat": "meteo", "details": {"probleme": "طقس خايب (أمطار وعواصف)"}},
+            "2026-05-29": {"etat": "conge", "details": {"travail": "يوم راحة عادي"}},
+            "2026-06-11": {"etat": "visite", "details": {"travail": "زيارة السيد المدير العام"}},
+        },
+        "ouvriers": {
+            "بشير بن حميد": {
+                "specialite": "رئيس مجموعة / بناي",
+                "cin": "05123456",
+                "tel": "99 888 777",
+                "taux_jour": 65,
+                "jours_total": 50,
+                "jours_semaine": 6,
+                "paye_total": 2500,
+                "avances": 400,
+            },
+            "صالح بن عمار": {
+                "specialite": "بناي محترف",
+                "cin": "07891234",
+                "tel": "98 123 456",
+                "taux_jour": 60,
+                "jours_total": 65,
+                "jours_semaine": 5,
+                "paye_total": 3000,
+                "avances": 500,
+            },
+            "الهادي العياري": {
+                "specialite": "مانوفري",
+                "cin": "04567890",
+                "tel": "22 345 678",
+                "taux_jour": 40,
+                "jours_total": 40,
+                "jours_semaine": 3,
+                "paye_total": 1500,
+                "avances": 300,
+            },
+        },
         "articles": {
-            "Bordure T2": {"nom_csv": "bordure t2", "objectif": 7700.0, "unite": "ml"},
-            "Bordure Mince P2": {"nom_csv": "bordure mince", "objectif": 7250.0, "unite": "ml"},
-            "Caniveau CS2": {"nom_csv": "caniveau central cs2", "objectif": 7700.0, "unite": "ml"},
-            "Caniveau CC2": {"nom_csv": "caniveau central cc2", "objectif": 500.0, "unite": "ml"},
-            "Pavé autobloquant": {"nom_csv": "pave autobloquant", "objectif": 15500.0, "unite": "م²"},
+            "Bordure T2": {"objectif": 1000, "fait_total": 650, "fait_semaine": 120, "unite": "ml"},
+            "Bordure Mince P2": {"objectif": 800, "fait_total": 400, "fait_semaine": 80, "unite": "ml"},
+            "Caniveau CS2": {"objectif": 500, "fait_total": 250, "fait_semaine": 40, "unite": "ml"},
+            "Caniveau CC2": {"objectif": 300, "fait_total": 150, "fait_semaine": 30, "unite": "ml"},
+            "Pavé autobloquant": {"objectif": 600, "fait_total": 200, "fait_semaine": 50, "unite": "م²"},
         }
     },
-    "LOT 1 - BOUKHROUF": {
+    "بوخروف (Boukharouf)": {
         "date_debut": date(2026, 6, 1),
+        "stats": {"vert": 30, "jaune": 10, "gris": 5, "meteo": 4, "conge": 3},
+        "jours": {
+            "2026-06-01": {"etat": "vert", "details": {"travail": "دخول الآلات وبداية التهيئة"}},
+            "2026-06-02": {"etat": "meteo", "details": {"probleme": "رياح قوية وأمطار"}},
+        },
+        "ouvriers": {
+            "بشير بن حميد": {
+                "specialite": "رئيس الفريق",
+                "cin": "05123456",
+                "tel": "99 888 777",
+                "taux_jour": 70,
+                "jours_total": 30,
+                "jours_semaine": 6,
+                "paye_total": 1500,
+                "avances": 200,
+            },
+            "جمعة المجبري": {
+                "specialite": "رئيس الفريق",
+                "cin": "01234567",
+                "tel": "55 789 012",
+                "taux_jour": 70,
+                "jours_total": 30,
+                "jours_semaine": 6,
+                "paye_total": 1500,
+                "avances": 200,
+            },
+            "علي الطرابلسي": {
+                "specialite": "بناي",
+                "cin": "06543210",
+                "tel": "24 567 890",
+                "taux_jour": 60,
+                "jours_total": 25,
+                "jours_semaine": 4,
+                "paye_total": 1000,
+                "avances": 100,
+            },
+        },
         "articles": {
-            "Double Cloison 0.35m": {"nom_csv": "double cloison 0,35 m", "objectif": 1450.0, "unite": "م²"},
-            "Double Cloison 0.30m": {"nom_csv": "double cloison 0,30 m", "objectif": 110.0, "unite": "م²"},
-            "Cloison 0.25m": {"nom_csv": "cloison 0,25 m", "objectif": 1150.0, "unite": "م²"},
-            "Enduit extérieur": {"nom_csv": "enduit exterieur", "objectif": 4700.0, "unite": "م²"},
-            "Enduit intérieur": {"nom_csv": "enduit interieur", "objectif": 2050.0, "unite": "م²"},
-            "Carrelage marbre 25x25": {"nom_csv": "carrelage marbre 25x25", "objectif": 1150.0, "unite": "م²"},
+            "Double Cloison 0.35m": {"objectif": 500, "fait_total": 250, "fait_semaine": 50, "unite": "م²"},
+            "Cloison 0.25m": {"objectif": 400, "fait_total": 200, "fait_semaine": 40, "unite": "م²"},
+            "Enduit extérieur": {"objectif": 1000, "fait_total": 500, "fait_semaine": 80, "unite": "م²"},
+            "Enduit intérieur": {"objectif": 900, "fait_total": 450, "fait_semaine": 70, "unite": "م²"},
+            "Carrelage marbré 25x25": {"objectif": 600, "fait_total": 300, "fait_semaine": 60, "unite": "م²"},
         }
     }
 }
 
-p_conf = objectifs_projets[projet_choisi]
-date_debut = p_conf["date_debut"]
-
-# ==========================================
-# دالة القراءة المباشرة من ملفات الـ CSV
-# ==========================================
-def charger_donnees(lot_cible):
-    jours_data = {}
-    ouvriers_total_jours = 0.0
-    ouvriers_par_nom = {}
-    quantites_realisees = {k: 0.0 for k in p_conf["articles"].keys()}
-    stats = {"vert": 0, "jaune": 0, "meteo": 0, "conge": 0}
-
-    # 1. قراءة الأشغال واليد العاملة من journal_chantier.csv
-    if os.path.exists(FICHIER_CHANTIER):
-        with open(FICHIER_CHANTIER, "r", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f, delimiter=";")
-            for ligne in reader:
-                if (ligne.get("Lot") or "").strip() != lot_cible:
-                    continue
-                
-                date_raw = (ligne.get("Date") or "")[:10].strip()
-                try:
-                    d_obj = datetime.strptime(date_raw, "%d/%m/%Y")
-                    date_iso = d_obj.strftime("%Y-%m-%d")
-                except ValueError:
-                    continue
-
-                op = (ligne.get("Operation") or "").strip().lower()
-                desc = (ligne.get("Description") or "").strip().lower()
-                try:
-                    qte = float((ligne.get("Quantite") or "0").replace(",", "."))
-                except ValueError:
-                    qte = 0.0
-
-                if date_iso not in jours_data:
-                    jours_data[date_iso] = {"etat": "vert", "details": {"travail": []}}
-                
-                if op == "travaux":
-                    jours_data[date_iso]["details"]["travail"].append(f"{ligne.get('Description')}: {qte} {ligne.get('Unite')}")
-                    # تجميع كميات الفصول
-                    for art_nom, art_info in p_conf["articles"].items():
-                        if art_info["nom_csv"] in desc:
-                            quantites_realisees[art_nom] += qte
-
-                elif op == "personnel":
-                    ouvriers_total_jours += qte
-
-    # 2. قراءة التعطيلات والتوقفات من journal_perturbations.csv
-    if os.path.exists(FICHIER_INCIDENTS):
-        with open(FICHIER_INCIDENTS, "r", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f, delimiter=";")
-            for ligne in reader:
-                if (ligne.get("Lot") or "").strip() != lot_cible:
-                    continue
-
-                date_raw = (ligne.get("Date") or "")[:10].strip()
-                try:
-                    if "/" in date_raw:
-                        d_obj = datetime.strptime(date_raw, "%d/%m/%Y")
-                    else:
-                        d_obj = datetime.strptime(date_raw, "%Y-%m-%d")
-                    date_iso = d_obj.strftime("%Y-%m-%d")
-                except ValueError:
-                    continue
-
-                type_inc = (ligne.get("Type") or "").strip()
-                cause = (ligne.get("Cause") or "").strip()
-                obs = (ligne.get("Observations") or "").strip()
-                details_txt = cause + (f" ({obs})" if obs else "")
-
-                if "meteo" in cause.lower() or "مطر" in cause.lower() or "ريح" in cause.lower():
-                    jours_data[date_iso] = {"etat": "meteo", "details": {"probleme": details_txt}}
-                else:
-                    jours_data[date_iso] = {"etat": "jaune", "details": {"probleme": details_txt}}
-
-    # حساب الإحصائيات
-    for j, data in jours_data.items():
-        etat = data["etat"]
-        if etat in stats:
-            stats[etat] += 1
-
-    return jours_data, quantites_realisees, ouvriers_total_jours, stats
-
-donnees_chantier, quantites_realisees, ouvriers_total_jours, stats = charger_donnees(projet_choisi)
+p_data = base_donnees_projets[projet_choisi]
+donnees_chantier = p_data["jours"]
+date_debut = p_data["date_debut"]
 
 if 'jour_clique' not in st.session_state:
     st.session_state.jour_clique = None
@@ -184,53 +178,113 @@ def set_jour(jour):
     st.session_state.jour_clique = jour
 
 # ==========================================
-# متابعة الأشغال في القائمة الجانبية (Sidebar)
+# إدارة ملفات الخدامة (تتخزن في dossier uploads أوتوماتيكياً)
 # ==========================================
-st.sidebar.markdown("### 🚧 تقدم الأشغال التعاقدية (حي من الـ CSV)")
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 👷 ملفات الخدامة وبطاقات التعريف (CIN)")
+ouvrier_choisi = st.sidebar.selectbox("اختر الخدام:", [""] + list(p_data["ouvriers"].keys()))
 
-for art_nom, art_info in p_conf["articles"].items():
-    fait = quantites_realisees.get(art_nom, 0.0)
-    obj = art_info["objectif"]
-    pct = min(int((fait / obj) * 100), 100) if obj > 0 else 0
+if ouvrier_choisi and ouvrier_choisi != "":
+    o = p_data["ouvriers"][ouvrier_choisi]
+    salaire_merite = o["jours_total"] * o["taux_jour"]
+    solde = salaire_merite - (o["paye_total"] + o["avances"])
     
-    st.sidebar.write(f"**{art_nom}** : {pct}% ({fait:.1f} / {obj:.0f} {art_info['unite']})")
-    st.sidebar.progress(pct)
+    st.sidebar.markdown(f"<h3 style='text-align: center;'>👷‍♂️ {ouvrier_choisi}</h3>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<p style='text-align: center; color: gray; margin-top: -10px;'>{o['specialite']}</p>", unsafe_allow_html=True)
+    
+    # مسارات الحفظ الدائم في مجلد uploads الخاص بالـ Agent IA
+    safe_name = ouvrier_choisi.replace(" ", "_")
+    img_path = f"uploads/{safe_name}_photo.jpg"
+    cin_path = f"uploads/{safe_name}_cin.jpg"
+    
+    # خانات الرفع مع التخزين الفوري في مجلد uploads لتلصق في التطبيق ولا تضيع بـ F5
+    img_ouvrier = st.sidebar.file_uploader(f"🖼️ صورة {ouvrier_choisi}:", type=["jpg", "png", "jpeg"], key=f"img_{ouvrier_choisi}")
+    if img_ouvrier is not None:
+        with open(img_path, "wb") as f:
+            f.write(img_ouvrier.getbuffer())
+            
+    if os.path.exists(img_path):
+        st.sidebar.image(img_path, width=140, caption="الصورة الشخصية (محفوظة)")
+        
+    cin_img = st.sidebar.file_uploader(f"🪪 نسخة بطاقة التعريف (CIN):", type=["jpg", "png", "jpeg"], key=f"cin_{ouvrier_choisi}")
+    if cin_img is not None:
+        with open(cin_path, "wb") as f:
+            f.write(cin_img.getbuffer())
+            
+    if os.path.exists(cin_path):
+        st.sidebar.image(cin_path, width=180, caption="بطاقة التعريف CIN (محفوظة)")
+
+    st.sidebar.markdown("---")
+    st.sidebar.write(f"🪪 **رقم ب.ت.و:** {o['cin']}")
+    st.sidebar.write(f"📞 **الهاتف:** {o['tel']}")
+    st.sidebar.write(f"💵 **خلاص نهاره:** {o['taux_jour']} دينار")
+    st.sidebar.write(f"📅 **خدم جملة:** {o['jours_total']} يوم")
+    st.sidebar.write(f"💰 **خالص جملة:** {o['paye_total']} د | **آفونس:** {o['avances']} د")
+    
+    if solde > 0:
+        st.sidebar.error(f"🔴 مستحقاته الباقية: {solde} دينار")
+    elif solde < 0:
+        st.sidebar.warning(f"⚠️ في الروج بـ: {abs(solde)} دينار")
+    else:
+        st.sidebar.success("✅ الحساب خالص ومريقل")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🚧 متابعة الأشغال والـ Articles")
+
+articles_disponibles = list(p_data["articles"].keys())
+article_selectionne = st.sidebar.selectbox("🔍 اختر العنصر:", [""] + articles_disponibles)
+
+if article_selectionne and article_selectionne != "":
+    tache_trouvee = p_data["articles"][article_selectionne]
+    pourcentage = min(int((tache_trouvee['fait_total'] / tache_trouvee['objectif']) * 100), 100)
+    
+    st.sidebar.write(f"📊 **التقدم في ({article_selectionne}):** {pourcentage}%")
+    st.sidebar.progress(pourcentage)
+    st.sidebar.write(f"✅ **خدمنا جملة:** {tache_trouvee['fait_total']} / {tache_trouvee['objectif']} {tache_trouvee['unite']}")
+    st.sidebar.write(f"⚡ **خدمنا الجمعة هذه:** {tache_trouvee['fait_semaine']} {tache_trouvee['unite']}")
+    
+    reste = tache_trouvee['objectif'] - tache_trouvee['fait_total']
+    if reste > 0:
+        st.sidebar.write(f"⏳ **مازال ناقص:** {reste} {tache_trouvee['unite']}")
+    else:
+        st.sidebar.write("✅ **كملت 100%**")
 
 # ==========================================
-# الصفحة الرئيسية (Main View)
+# الواجهة الرئيسية (Main Page)
 # ==========================================
-st.title(f"🏗️ H.O Bâtiment — {projet_choisi}")
-st.markdown("**متابعة حية متصلة مباشرة مع قاعدة بيانات الـ Agent IA**")
+st.title(f"📅 H.O Bâtiment - {projet_choisi}")
+st.markdown("**Entreprise H.O Construction & Travaux Publics** - Suivi des Chantiers & Avancement")
 
 col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-col_stat1.metric("🟢 أيام العمل الفعلية", f"{stats['vert']} يوم")
-col_stat2.metric("🟡 أيام توقف الأشغال", f"{stats['jaune']} يوم")
-col_stat3.metric("🌧️ توقف بسبب الطقس", f"{stats['meteo']} يوم")
-col_stat4.metric("👷 مجموع أيام اليد العاملة", f"{ouvriers_total_jours:.1f} شخص-يوم")
+col_stat1.metric("🟢 أيام العمل", f"{p_data['stats']['vert']} يوم")
+col_stat2.metric("🟡 إيقاف الأشغال", f"{p_data['stats']['jaune']} يوم")
+col_stat3.metric("🌧️ طقس خايب", f"{p_data['stats']['meteo']} يوم")
+col_stat4.metric("🔵 راحة عادية", f"{p_data['stats']['conge']} يوم")
 st.markdown("---")
 
-# تفاصيل اليوم عند النقر
+# عرض تفاصيل اليوم المختار في الواجهة الرئيسية بوضوح تام
 jour = st.session_state.jour_clique
 if jour:
-    st.info(f"📅 **تفاصيل اليوم المحدد: {jour}**")
+    st.info(f"📅 **تفاصيل يوم الرزنامة: {jour}**")
     if jour in donnees_chantier:
         etat = donnees_chantier[jour]["etat"]
-        details = donnees_chantier[jour]["details"]
         if etat == "vert":
-            travaux_str = " | ".join(details.get("travail", [])) if details.get("travail") else "يوم عمل مسجل"
-            st.success(f"🟢 **أشغال منجزة:** {travaux_str}")
+            st.success(f"🟢 يوم عمل فعلي — **التفاصيل:** {donnees_chantier[jour]['details'].get('travail', '')}")
+        elif etat == "visite":
+            st.info(f"📋 زيارة رسمية — **البيان:** {donnees_chantier[jour]['details'].get('travail', '')}")
         elif etat == "jaune":
-            st.warning(f"🟡 **إيقاف أشغال:** {details.get('probleme', 'بدون تفاصيل')}")
+            st.warning(f"🟡 إيقاف الأشغال — **السبب:** {donnees_chantier[jour]['details']['probleme']}")
         elif etat == "meteo":
-            st.error(f"🌧️ **توقف بسبب الطقس:** {details.get('probleme', 'أمطار أو رياح')}")
+            st.error(f"🌧️ توقف بسبب الطقس — **التفاصيل:** {donnees_chantier[jour]['details']['probleme']}")
+        elif etat == "conge":
+            st.info(f"🔵 يوم راحة عادي — **البيان:** {donnees_chantier[jour]['details'].get('travail', '')}")
     else:
-        st.write("📝 لا توجد عمليات مسجلة في هذا اليوم.")
+        st.write("📝 لا يوجد تسجيل خاص في هذا اليوم.")
 else:
-    st.markdown("👉 **انقر على أي يوم مسجل في الرزنامة أسفله للاطلاع على تفاصيله:**")
+    st.markdown("👉 **انقر على أي يوم في الرزنامة أسفله لمتابعة تفاصيله هنا:**")
 
 st.markdown("---")
 
-# رسم الرزنامة التفاعلية
 mois_arabes = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
 annee = date_debut.year
 mois_a_afficher = list(range(date_debut.month, 13))
@@ -239,8 +293,10 @@ def get_couleur_jour(date_str):
     if date_str in donnees_chantier:
         etat = donnees_chantier[date_str]["etat"]
         if etat == "vert": return "🟢"
+        if etat == "visite": return "📋"
         if etat == "jaune": return "🟡"
         if etat == "meteo": return "🌧️"
+        if etat == "conge": return "🔵"
     return "⬜"
 
 for i in range(0, len(mois_a_afficher), 2):
@@ -255,15 +311,12 @@ for i in range(0, len(mois_a_afficher), 2):
         
         for semaine in calendar.monthcalendar(annee, m1):
             cols = st.columns(7)
-            for k, j_num in enumerate(semaine):
-                if j_num == 0: 
-                    cols[k].write("")
+            for k, jour in enumerate(semaine):
+                if jour == 0: cols[k].write("")
                 else:
-                    date_str = f"{annee}-{m1:02d}-{j_num:02d}"
-                    if date(annee, m1, j_num) < date_debut: 
-                        cols[k].markdown(f"<div style='text-align:center; color:grey; font-size: 12px;'>🚫</div>", unsafe_allow_html=True)
-                    else: 
-                        cols[k].button(f"{get_couleur_jour(date_str)} {j_num}", key=f"btn_{projet_choisi}_{date_str}", on_click=set_jour, args=(date_str,), use_container_width=True)
+                    date_str = f"{annee}-{m1:02d}-{jour:02d}"
+                    if date(annee, m1, jour) < date_debut: cols[k].markdown(f"<div style='text-align:center; color:grey; font-size: 12px;'>🚫</div>", unsafe_allow_html=True)
+                    else: cols[k].button(f"{get_couleur_jour(date_str)} {jour}", key=f"btn_{projet_choisi}_{date_str}", on_click=set_jour, args=(date_str,), use_container_width=True)
                         
     if i + 1 < len(mois_a_afficher):
         m2 = mois_a_afficher[i+1]
@@ -274,12 +327,9 @@ for i in range(0, len(mois_a_afficher), 2):
             
             for semaine in calendar.monthcalendar(annee, m2):
                 cols = st.columns(7)
-                for k, j_num in enumerate(semaine):
-                    if j_num == 0: 
-                        cols[k].write("")
+                for k, jour in enumerate(semaine):
+                    if jour == 0: cols[k].write("")
                     else:
-                        date_str = f"{annee}-{m2:02d}-{j_num:02d}"
-                        if date(annee, m2, j_num) < date_debut: 
-                            cols[k].markdown(f"<div style='text-align:center; color:grey; font-size: 12px;'>🚫</div>", unsafe_allow_html=True)
-                        else: 
-                            cols[k].button(f"{get_couleur_jour(date_str)} {j_num}", key=f"btn_{projet_choisi}_{date_str}_2", on_click=set_jour, args=(date_str,), use_container_width=True)
+                        date_str = f"{annee}-{m2:02d}-{jour:02d}"
+                        if date(annee, m2, jour) < date_debut: cols[k].markdown(f"<div style='text-align:center; color:grey; font-size: 12px;'>🚫</div>", unsafe_allow_html=True)
+                        else: cols[k].button(f"{get_couleur_jour(date_str)} {jour}", key=f"2_btn_{projet_choisi}_{date_str}", on_click=set_jour, args=(date_str,), use_container_width=True)
