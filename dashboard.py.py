@@ -3,10 +3,10 @@ import calendar
 from datetime import date
 import os
 
-st.set_page_config(page_title="H.O Construction - Tableau de Bord", page_icon="🏗️", layout="wide")
+st.set_page_config(page_title="H.O Construction - Tableau de Bord IA", page_icon="🏗️", layout="wide")
 
 # ==========================================
-# تصميم CSS فخم ومنظم للملفات واللوغو
+# تصميم CSS فخم ومنظم للواجهة
 # ==========================================
 st.markdown("""
     <style>
@@ -53,7 +53,7 @@ else:
     st.sidebar.markdown("<h1 style='text-align: center; margin:0;'>🏗️</h1>", unsafe_allow_html=True)
 
 st.sidebar.markdown("<p class='brand-title'>H.O Bâtiment</p>", unsafe_allow_html=True)
-st.sidebar.markdown("<p class='brand-subtitle'>Construction & Travaux Publics</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<p class='brand-subtitle'>Agent IA — Central Hub</p>", unsafe_allow_html=True)
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 if not logo_path:
@@ -71,7 +71,7 @@ projet_choisi = st.sidebar.selectbox("📂 اختر المشروع:", [
 ])
 
 # ==========================================
-# قاعدة البيانات المرتبطة بـ Agent IA
+# قاعدة البيانات المركزية المربوطة بـ Agent IA
 # ==========================================
 base_donnees_projets = {
     "خليج الشعرة (Khalij Chaara)": {
@@ -85,25 +85,16 @@ base_donnees_projets = {
             "2026-06-11": {"etat": "visite", "details": {"travail": "زيارة السيد المدير العام"}},
         },
         "ouvriers": {
-            "بشير بن حميد": {
-                "specialite": "رئيس مجموعة / بناي (حسب تقرير Agent IA: تشلّل الفريق وتأطير الخدمة)",
-                "tel": "99 888 777", "taux_jour": 65, "jours_total": 50, "paye_total": 2500, "avances": 400
-            },
-            "صالح بن عمار": {
-                "specialite": "بناي محترف (حسب تقرير Agent IA: إنجاز متواصل للبوردور)",
-                "tel": "98 123 456", "taux_jour": 60, "jours_total": 65, "paye_total": 3000, "avances": 500
-            },
-            "الهادي العياري": {
-                "specialite": "مانوفري (حسب تقرير Agent IA: معاونة البناوية وتهيئة المكان)",
-                "tel": "22 345 678", "taux_jour": 40, "jours_total": 40, "paye_total": 1500, "avances": 300
-            },
+            "بشير بن حميد": {"specialite": "رئيس مجموعة / بناي", "tel": "99 888 777", "taux_jour": 65, "jours_total": 50, "paye_total": 2500, "avances": 400},
+            "صالح بن عمار": {"specialite": "بناي محترف", "tel": "98 123 456", "taux_jour": 60, "jours_total": 65, "paye_total": 3000, "avances": 500},
+            "الهادي العياري": {"specialite": "مانوفري", "tel": "22 345 678", "taux_jour": 40, "jours_total": 40, "paye_total": 1500, "avances": 300},
         },
         "articles": {
-            "Bordure T2": {"objectif": 7700.0, "fait_total": 650, "fait_semaine": 120, "unite": "ml"},
-            "Bordure Mince P2": {"objectif": 7250.0, "fait_total": 400, "fait_semaine": 80, "unite": "ml"},
-            "Caniveau CS2": {"objectif": 7700.0, "fait_total": 250, "fait_semaine": 40, "unite": "ml"},
-            "Caniveau CC2": {"objectif": 500.0, "fait_total": 150, "fait_semaine": 30, "unite": "ml"},
-            "Pavé autobloquant": {"objectif": 15500.0, "fait_total": 200, "fait_semaine": 50, "unite": "م²"},
+            "Bordure T2": {"objectif": 7700.0, "fait_total": 1540.0, "fait_semaine": 120, "unite": "ml"},
+            "Bordure Mince P2": {"objectif": 7250.0, "fait_total": 1450.0, "fait_semaine": 80, "unite": "ml"},
+            "Caniveau CS2": {"objectif": 7700.0, "fait_total": 1155.0, "fait_semaine": 40, "unite": "ml"},
+            "Caniveau CC2": {"objectif": 500.0, "fait_total": 150.0, "fait_semaine": 30, "unite": "ml"},
+            "Pavé autobloquant": {"objectif": 15500.0, "fait_total": 3100.0, "fait_semaine": 50, "unite": "م²"},
         }
     },
     "بوخروف (Boukharouf)": {
@@ -114,38 +105,29 @@ base_donnees_projets = {
             "2026-06-02": {"etat": "meteo", "details": {"probleme": "رياح قوية وأمطار"}},
         },
         "ouvriers": {
-            "بشير بن حميد": {
-                "specialite": "رئيس الفريق (حسب تقرير Agent IA: متابعة البناء وتركيز الشانطي)",
-                "tel": "99 888 777", "taux_jour": 70, "jours_total": 30, "paye_total": 1500, "avances": 200
-            },
-            "جمعة المجبري": {
-                "specialite": "رئيس الفريق (حسب تقرير Agent IA: تنظيم العمال وتوفير المواد)",
-                "tel": "55 789 012", "taux_jour": 70, "jours_total": 30, "paye_total": 1500, "avances": 200
-            },
-            "علي الطرابلسي": {
-                "specialite": "بناي (حسب تقرير Agent IA: إنجاز الدبل كلوازون بدقة)",
-                "tel": "24 567 890", "taux_jour": 60, "jours_total": 25, "paye_total": 1000, "avances": 100
-            },
+            "بشير بن حميد": {"specialite": "رئيس الفريق", "tel": "99 888 777", "taux_jour": 70, "jours_total": 30, "paye_total": 1500, "avances": 200},
+            "جمعة المجبري": {"specialite": "رئيس الفريق", "tel": "55 789 012", "taux_jour": 70, "jours_total": 30, "paye_total": 1500, "avances": 200},
+            "علي الطرابلسي": {"specialite": "بناي", "tel": "24 567 890", "taux_jour": 60, "jours_total": 25, "paye_total": 1000, "avances": 100},
         },
         "articles": {
-            "A.01 Double Cloison 0.35m": {"objectif": 1450.0, "fait_total": 250, "fait_semaine": 50, "unite": "م²"},
-            "A.02 Double Cloison 0.30m": {"objectif": 110.0, "fait_total": 40, "fait_semaine": 15, "unite": "م²"},
-            "A.03 Cloison 0.25m": {"objectif": 1150.0, "fait_total": 200, "fait_semaine": 40, "unite": "م²"},
-            "A.04 Cloison 0.20m": {"objectif": 5.0, "fait_total": 2, "fait_semaine": 1, "unite": "م²"},
-            "A.05 Cloison 0.15m": {"objectif": 180.0, "fait_total": 50, "fait_semaine": 10, "unite": "م²"},
-            "A.06 Cloison 0.10m": {"objectif": 400.0, "fait_total": 100, "fait_semaine": 20, "unite": "م²"},
-            "B-1 Enduit extérieur": {"objectif": 4700.0, "fait_total": 500, "fait_semaine": 80, "unite": "م²"},
-            "B-2 Enduit intérieur": {"objectif": 2050.0, "fait_total": 450, "fait_semaine": 70, "unite": "م²"},
-            "B-3 Enduit sous plafond": {"objectif": 1900.0, "fait_total": 300, "fait_semaine": 50, "unite": "م²"},
-            "B-4 Enduit grillagé": {"objectif": 350.0, "fait_total": 50, "fait_semaine": 10, "unite": "م²"},
-            "B-5 Enduit de ravoirage": {"objectif": 850.0, "fait_total": 150, "fait_semaine": 30, "unite": "م²"},
-            "C-1 Carrelage marbré 25x25": {"objectif": 1150.0, "fait_total": 300, "fait_semaine": 60, "unite": "م²"},
-            "C-2 Carrelage carreaux": {"objectif": 2400.0, "fait_total": 600, "fait_semaine": 100, "unite": "م²"},
-            "C-3 Revêtement carreaux": {"objectif": 190.0, "fait_total": 40, "fait_semaine": 10, "unite": "م²"},
-            "C-4 Plinthe": {"objectif": 1000.0, "fait_total": 200, "fait_semaine": 40, "unite": "ml"},
-            "C-5 Revêtement extérieur": {"objectif": 15.0, "fait_total": 5, "fait_semaine": 2, "unite": "م²"},
-            "C-6 Seuils en marbre Thala": {"objectif": 15.0, "fait_total": 4, "fait_semaine": 1, "unite": "م²"},
-            "C-7 Siffle en marbre Thala": {"objectif": 50.0, "fait_total": 10, "fait_semaine": 5, "unite": "ml"},
+            "A.01 Double Cloison 0.35m": {"objectif": 1450.0, "fait_total": 435.0, "fait_semaine": 50, "unite": "م²"},
+            "A.02 Double Cloison 0.30m": {"objectif": 110.0, "fait_total": 33.0, "fait_semaine": 15, "unite": "م²"},
+            "A.03 Cloison 0.25m": {"objectif": 1150.0, "fait_total": 345.0, "fait_semaine": 40, "unite": "م²"},
+            "A.04 Cloison 0.20m": {"objectif": 5.0, "fait_total": 1.5, "fait_semaine": 1, "unite": "م²"},
+            "A.05 Cloison 0.15m": {"objectif": 180.0, "fait_total": 54.0, "fait_semaine": 10, "unite": "م²"},
+            "A.06 Cloison 0.10m": {"objectif": 400.0, "fait_total": 120.0, "fait_semaine": 20, "unite": "م²"},
+            "B-1 Enduit extérieur": {"objectif": 4700.0, "fait_total": 1410.0, "fait_semaine": 80, "unite": "م²"},
+            "B-2 Enduit intérieur": {"objectif": 2050.0, "fait_total": 615.0, "fait_semaine": 70, "unite": "م²"},
+            "B-3 Enduit sous plafond": {"objectif": 1900.0, "fait_total": 570.0, "fait_semaine": 50, "unite": "م²"},
+            "B-4 Enduit grillagé": {"objectif": 350.0, "fait_total": 105.0, "fait_semaine": 10, "unite": "م²"},
+            "B-5 Enduit de ravoirage": {"objectif": 850.0, "fait_total": 255.0, "fait_semaine": 30, "unite": "م²"},
+            "C-1 Carrelage marbré 25x25": {"objectif": 1150.0, "fait_total": 345.0, "fait_semaine": 60, "unite": "م²"},
+            "C-2 Carrelage carreaux": {"objectif": 2400.0, "fait_total": 720.0, "fait_semaine": 100, "unite": "م²"},
+            "C-3 Revêtement carreaux": {"objectif": 190.0, "fait_total": 57.0, "fait_semaine": 10, "unite": "م²"},
+            "C-4 Plinthe": {"objectif": 1000.0, "fait_total": 300.0, "fait_semaine": 40, "unite": "ml"},
+            "C-5 Revêtement extérieur": {"objectif": 15.0, "fait_total": 4.5, "fait_semaine": 2, "unite": "م²"},
+            "C-6 Seuils en marbre Thala": {"objectif": 15.0, "fait_total": 4.5, "fait_semaine": 1, "unite": "م²"},
+            "C-7 Siffle en marbre Thala": {"objectif": 50.0, "fait_total": 15.0, "fait_semaine": 5, "unite": "ml"},
         }
     }
 }
@@ -161,17 +143,17 @@ def set_jour(jour):
     st.session_state.jour_clique = jour
 
 # ==========================================
-# إدارة ملفات الخدامة وحساب الأسبوع والـ Agent IA
+# إدارة الخدامة والتقرير الذكي لـ Agent IA
 # ==========================================
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 👷 ملفات الخدامة وحسابات Agent IA")
-ouvrier_choisi = st.sidebar.selectbox("اختر الخدام:", [""] + list(p_data["ouvriers"].keys()))
+st.sidebar.markdown("### 🤖 تقرير Agent IA للخدامة")
+ouvrier_choisi = st.sidebar.selectbox("اختر الخدام للمتابعة:", [""] + list(p_data["ouvriers"].keys()))
 
 if ouvrier_choisi and ouvrier_choisi != "":
     o = p_data["ouvriers"][ouvrier_choisi]
     
     st.sidebar.markdown(f"<h3 style='text-align: center;'>👷‍♂️ {ouvrier_choisi}</h3>", unsafe_allow_html=True)
-    st.sidebar.markdown(f"<p style='text-align: center; color: #ff4b4b; font-weight: bold; font-size: 13px;'>🤖 {o['specialite']}</p>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<p style='text-align: center; color: #ff4b4b; font-weight: bold;'>{o['specialite']}</p>", unsafe_allow_html=True)
     
     safe_name = ouvrier_choisi.replace(" ", "_")
     img_path = f"uploads/{safe_name}_photo.jpg"
@@ -189,8 +171,7 @@ if ouvrier_choisi and ouvrier_choisi != "":
     st.sidebar.write(f"📞 **الهاتف:** {o['tel']}")
     st.sidebar.write(f"💵 **خلاص نهاره:** {o['taux_jour']} دينار")
     
-    # حساب أيام الأسبوع (من الإثنين للأحد) عبر الـ Agent IA
-    st.sidebar.markdown("📅 **متابعة أيام الأسبوع (من لثنين للأحد):**")
+    st.sidebar.markdown("📅 **أيام الحضور (من الإثنين للأحد):**")
     jours_semaine_noms = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
     
     jours_travailles_semaine = 0.0
@@ -198,7 +179,7 @@ if ouvrier_choisi and ouvrier_choisi != "":
         val_j = st.sidebar.number_input(f"{js}:", min_value=0.0, max_value=1.0, value=1.0, step=0.5, key=f"{ouvrier_choisi}_{js}")
         jours_travailles_semaine += val_j
         
-    st.sidebar.info(f"⚡ مجموع أيام الجمعة: **{jours_travailles_semaine} يوم**")
+    st.sidebar.info(f"⚡ مجموع أيام العمل الأسبوعية: **{jours_travailles_semaine} يوم**")
     
     salaire_semaine = jours_travailles_semaine * o['taux_jour']
     st.sidebar.success(f"💰 **أجرة هذه الجمعة:** {salaire_semaine} دينار")
@@ -213,10 +194,10 @@ if ouvrier_choisi and ouvrier_choisi != "":
         st.sidebar.success("✅ الحساب خالص ومريقل")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🚧 متابعة الأشغال والبنود")
+st.sidebar.markdown("### 📊 تحليل Agent IA للأشغال والبنود")
 
 articles_disponibles = list(p_data["articles"].keys())
-article_selectionne = st.sidebar.selectbox("🔍 اختر العنصر:", [""] + articles_disponibles)
+article_selectionne = st.sidebar.selectbox("🔍 اختر البند (Article):", [""] + articles_disponibles)
 
 if article_selectionne and article_selectionne != "":
     tache_trouvee = p_data["articles"][article_selectionne]
@@ -224,47 +205,47 @@ if article_selectionne and article_selectionne != "":
     
     st.sidebar.write(f"📊 **التقدم في ({article_selectionne}):** {pourcentage}%")
     st.sidebar.progress(pourcentage)
-    st.sidebar.write(f"✅ **خدمنا جملة:** {tache_trouvee['fait_total']} / {tache_trouvee['objectif']} {tache_trouvee['unite']}")
-    st.sidebar.write(f"⚡ **خدمنا الجمعة هذه:** {tache_trouvee['fait_semaine']} {tache_trouvee['unite']}")
+    st.sidebar.write(f"✅ **أفاد Agent IA (المجز):** {tache_trouvee['fait_total']} / {tache_trouvee['objectif']} {tache_trouvee['unite']}")
+    st.sidebar.write(f"⚡ **إنجاز الجمعة:** {tache_trouvee['fait_semaine']} {tache_trouvee['unite']}")
     
     reste = tache_trouvee['objectif'] - tache_trouvee['fait_total']
     if reste > 0:
-        st.sidebar.write(f"⏳ **مازال ناقص:** {reste} {tache_trouvee['unite']}")
+        st.sidebar.write(f"⏳ **المتبقي حسب العقد:** {reste} {tache_trouvee['unite']}")
     else:
-        st.sidebar.write("✅ **كملت 100%**")
+        st.sidebar.write("✅ **اكتمل البند بنجاح 100%**")
 
 # ==========================================
 # الواجهة الرئيسية (Main Page)
 # ==========================================
-st.title(f"📅 H.O Bâtiment - {projet_choisi}")
-st.markdown("**Entreprise H.O Construction & Travaux Publics** - Suivi des Chantiers & Agent IA")
+st.title(f"🤖 H.O Bâtiment — لوحة تحكم Agent IA ({projet_choisi})")
+st.markdown("**متابعة ذكية ومباشرة لجميع بيانات الشانطي والبنود والعمال بدعم من Agent IA**")
 
 col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-col_stat1.metric("🟢 أيام العمل", f"{p_data['stats']['vert']} يوم")
+col_stat1.metric("🟢 أيام العمل الفعلية", f"{p_data['stats']['vert']} يوم")
 col_stat2.metric("🟡 إيقاف الأشغال", f"{p_data['stats']['jaune']} يوم")
-col_stat3.metric("🌧️ طقس خايب", f"{p_data['stats']['meteo']} يوم")
+col_stat3.metric("🌧️ توقف طقس", f"{p_data['stats']['meteo']} يوم")
 col_stat4.metric("🔵 راحة عادية", f"{p_data['stats']['conge']} يوم")
 st.markdown("---")
 
 jour = st.session_state.jour_clique
 if jour:
-    st.info(f"📅 **تفاصيل يوم الرزنامة: {jour}**")
+    st.info(f"📅 **تفاصيل اليوم المختار عبر تقرير Agent IA: {jour}**")
     if jour in donnees_chantier:
         etat = donnees_chantier[jour]["etat"]
         if etat == "vert":
-            st.success(f"🟢 يوم عمل فعلي — **التفاصيل:** {donnees_chantier[jour]['details'].get('travail', '')}")
+            st.success(f"🟢 يوم عمل فعلي — **تقرير IA:** {donnees_chantier[jour]['details'].get('travail', '')}")
         elif etat == "visite":
-            st.info(f"📋 زيارة رسمية — **البيان:** {donnees_chantier[jour]['details'].get('travail', '')}")
+            st.info(f"📋 زيارة رسمية — **تقرير IA:** {donnees_chantier[jour]['details'].get('travail', '')}")
         elif etat == "jaune":
-            st.warning(f"🟡 إيقاف الأشغال — **السبب:** {donnees_chantier[jour]['details']['probleme']}")
+            st.warning(f"🟡 إيقاف الأشغال — **سبب معلل من IA:** {donnees_chantier[jour]['details']['probleme']}")
         elif etat == "meteo":
-            st.error(f"🌧️ توقف بسبب الطقس — **التفاصيل:** {donnees_chantier[jour]['details']['probleme']}")
+            st.error(f"🌧️ توقف جوي — **رصد IA:** {donnees_chantier[jour]['details']['probleme']}")
         elif etat == "conge":
-            st.info(f"🔵 يوم راحة عادي — **البيان:** {donnees_chantier[jour]['details'].get('travail', '')}")
+            st.info(f"🔵 يوم راحة — **ملاحظة IA:** {donnees_chantier[jour]['details'].get('travail', '')}")
     else:
-        st.write("📝 لا يوجد تسجيل خاص في هذا اليوم.")
+        st.write("📝 لا توجد أحداث مسجلة في هذا اليوم.")
 else:
-    st.markdown("👉 **انقر على أي يوم في الرزنامة أسفله لمتابعة تفاصيله هنا:**")
+    st.markdown("👉 **انقر على أي يوم في الرزنامة أسفله لاستعراض تحليل Agent IA الشامل:**")
 
 st.markdown("---")
 
