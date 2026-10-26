@@ -180,4 +180,121 @@ if ouvrier_choisi and ouvrier_choisi != "":
         val_j = st.sidebar.number_input(f"{js}:", min_value=0.0, max_value=1.0, value=1.0, step=0.5, key=f"{ouvrier_choisi}_{js}")
         jours_travailles_semaine += val_j
         
-    st.sidebar.info(defaut_semaine := f"⚡ مجموع أيام هذه اللحمة (الإثنين-الأحد): **{jours_trava
+    st.sidebar.info(defaut_semaine := f"⚡ مجموع أيام هذه اللحمة (الإثنين-الأحد): **{jours_travailles_semaine} يوم**")
+    
+    salaire_semaine = jours_travailles_semaine * o['taux_jour']
+    st.sidebar.success(f"💰 **أجرة هذه الجمعة:** {salaire_semaine} دينار")
+    
+    salaire_merite = (o['jours_total'] + jours_travailles_semaine) * o['taux_jour']
+    solde = salaire_merite - (o['paye_total'] + o['avances'])
+    
+    st.sidebar.write(f"💰 **خالص جملة:** {o['paye_total']} د | **آفونس:** {o['avances']} د")
+    if solde > 0:
+        st.sidebar.error(f"🔴 المستحقات الباقية: {solde} دينار")
+    else:
+        st.sidebar.success("✅ الحساب خالص ومريقل")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🚧 متابعة الأشغال والبنود")
+
+articles_disponibles = list(p_data["articles"].keys())
+article_selectionne = st.sidebar.selectbox("🔍 اختر العنصر:", [""] + articles_disponibles)
+
+if article_selectionne and article_selectionne != "":
+    tache_trouvee = p_data["articles"][article_selectionne]
+    pourcentage = min(int((tache_trouvee['fait_total'] / tache_trouvee['objectif']) * 100), 100)
+    
+    st.sidebar.write(f"📊 **التقدم في ({article_selectionne}):** {pourcentage}%")
+    st.sidebar.progress(pourcentage)
+    st.sidebar.write(f"✅ **خدمنا جملة:** {tache_trouvee['fait_total']} / {tache_trouvee['objectif']} {tache_trouvee['unite']}")
+    st.sidebar.write(f"⚡ **خدمنا الجمعة هذه:** {tache_trouvee['fait_semaine']} {tache_trouvee['unite']}")
+    
+    reste = tache_trouvee['objectif'] - tache_trouvee['fait_total']
+    if reste > 0:
+        st.sidebar.write(f"⏳ **مازال ناقص:** {reste} {tache_trouvee['unite']}")
+    else:
+        st.sidebar.write("✅ **كملت 100%**")
+
+# ==========================================
+# الواجهة الرئيسية (Main Page)
+# ==========================================
+st.title(f"📅 H.O Bâtiment - {projet_choisi}")
+st.markdown("**Entreprise H.O Construction & Travaux Publics** - Suivi des Chantiers & Avancement")
+
+col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+col_stat1.metric("🟢 أيام العمل", f"{p_data['stats']['vert']} يوم")
+col_stat2.metric("🟡 إيقاف الأشغال", f"{p_data['stats']['jaune']} يوم")
+col_stat3.metric("🌧️ طقس خايب", f"{p_data['stats']['meteo']} يوم")
+col_stat4.metric("🔵 راحة عادية", f"{p_data['stats']['conge']} يوم")
+st.markdown("---")
+
+jour = st.session_state.jour_clique
+if jour:
+    st.info(f"📅 **تفاصيل يوم الرزنامة: {jour}**")
+    if jour in donnees_chantier:
+        etat = donnees_chantier[jour]["etat"]
+        if etat == "vert":
+            st.success(f"🟢 يوم عمل فعلي — **التفاصيل:** {donnees_chantier[jour]['details'].get('travail', '')}")
+        elif etat == "visite":
+            st.info(f"📋 زيارة رسمية — **البيان:** {donnees_chantier[jour]['details'].get('travail', '')}")
+        elif etat == "jaune":
+            st.warning(f"🟡 إيقاف الأشغال — **السبب:** {donnees_chantier[jour]['details']['probleme']}")
+        elif etat == "meteo":
+            st.error(f"🌧️ توقف بسبب الطقس — **التفاصيل:** {donnees_chantier[jour]['details']['probleme']}")
+        elif etat == "conge":
+            st.info(f"🔵 يوم راحة عادي — **البيان:** {donnees_chantier[jour]['details'].get('travail', '')}")
+    else:
+        st.write("📝 لا يوجد تسجيل خاص في هذا اليوم.")
+else:
+    st.markdown("👉 **انقر على أي يوم في الرزنامة أسفله لمتابعة تفاصيله هنا:**")
+
+st.markdown("---")
+
+mois_arabes = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+annee = date_debut.year
+mois_a_afficher = list(range(date_debut.month, 13))
+
+def get_couleur_jour(date_str):
+    if date_str in donnees_chantier:
+        etat = donnees_chantier[date_str]["etat"]
+        if etat == "vert": return "🟢"
+        if etat == "visite": return "📋"
+        if etat == "jaune": return "🟡"
+        if etat == "meteo": return "🌧️"
+        if etat == "conge": return "🔵"
+    return "⬜"
+
+for i in range(0, len(mois_a_afficher), 2):
+    col1, col2 = st.columns(2)
+    
+    m1 = mois_a_afficher[i]
+    with col1:
+        st.markdown(f"<h5 style='text-align: center; background-color: #f0f2f6; padding: 5px; border-radius: 5px;'>شهر {mois_arabes[m1-1]} {annee}</h5>", unsafe_allow_html=True)
+        jours_semaine = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
+        cols_j1 = st.columns(7)
+        for k, j in enumerate(jours_semaine): cols_j1[k].markdown(f"<div style='text-align: center; font-size: 11px; font-weight: bold;'>{j[:4]}</div>", unsafe_allow_html=True)
+        
+        for semaine in calendar.monthcalendar(annee, m1):
+            cols = st.columns(7)
+            for k, jour in enumerate(semaine):
+                if jour == 0: cols[k].write("")
+                else:
+                    date_str = f"{annee}-{m1:02d}-{jour:02d}"
+                    if date(annee, m1, jour) < date_debut: cols[k].markdown(f"<div style='text-align:center; color:grey; font-size: 12px;'>🚫</div>", unsafe_allow_html=True)
+                    else: cols[k].button(f"{get_couleur_jour(date_str)} {jour}", key=f"btn_{projet_choisi}_{date_str}", on_click=set_jour, args=(date_str,), use_container_width=True)
+                        
+    if i + 1 < len(mois_a_afficher):
+        m2 = mois_a_afficher[i+1]
+        with col2:
+            st.markdown(f"<h5 style='text-align: center; background-color: #f0f2f6; padding: 5px; border-radius: 5px;'>شهر {mois_arabes[m2-1]} {annee}</h5>", unsafe_allow_html=True)
+            cols_j2 = st.columns(7)
+            for k, j in enumerate(jours_semaine): cols_j2[k].markdown(f"<div style='text-align: center; font-size: 11px; font-weight: bold;'>{j[:4]}</div>", unsafe_allow_html=True)
+            
+            for semaine in calendar.monthcalendar(annee, m2):
+                cols = st.columns(7)
+                for k, jour in enumerate(semaine):
+                    if jour == 0: cols[k].write("")
+                    else:
+                        date_str = f"{annee}-{m2:02d}-{jour:02d}"
+                        if date(annee, m2, jour) < date_debut: cols[k].markdown(f"<div style='text-align:center; color:grey; font-size: 12px;'>🚫</div>", unsafe_allow_html=True)
+                        else: cols[k].button(f"{get_couleur_jour(date_str)} {jour}", key=f"2_btn_{projet_choisi}_{date_str}", on_click=set_jour, args=(date_str,), use_container_width=True)
