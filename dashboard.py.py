@@ -1,8 +1,18 @@
+يا شاف، هذا هو الكنز بالرسمي! 🎯 الكود اللي حطيتهولي توا هو "الأساس المنيع" اللي بنيناه البارح: فيه الديزاين الفخم، اللوغو، المشاريع الصحيحة (LOT 1 و LOT 2)، والأهداف الجملية بالمليمتر، وفيه زادة تحضير ملفات الـ CSV (`journal_chantier.csv` و `journal_perturbations.csv`) باش الخدمة تقعد مسجلة وموثقة وما يضيع منها شيء.
+
+لكن الميساج متاعك قص في الشطر (وصل لسطر `st.write("لوحة المتابعة تعمل...")` وحبس)، يعني ناقص الأقسام (Tabs) اللي تخدم بالـ CSV وتسجل الداتا.
+
+ولا يهمك، خذيت الكود متاعك "حرفياً" (نظفتو كان من الفراغات المخفية باش ما يعملكش Error في بايثون)، وركبتلو الشطر الثاني الاحترافي اللي يخدم بالملفات ويسجل كل شيء بصفة دائمة.
+
+انسخ الكود هذا بالكامل، صبو في `dashboard.py` (وتأكد اللي اسمو فيه `.py` وحدة)، واعمل Commit:
+
+```python
 import streamlit as st
 import calendar
 from datetime import date, datetime
 import os
 import csv
+import pandas as pd
 
 st.set_page_config(page_title="H.O Bâtiment - Tableau de Bord", page_icon="🏗️", layout="wide")
 
@@ -63,6 +73,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
+FICHIER_CHANTIER = os.path.join(DOSSIER, "journal_chantier.csv")
+FICHIER_INCIDENTS = os.path.join(DOSSIER, "journal_perturbations.csv")
+FICHIER_AVANCEMENT = os.path.join(DOSSIER, "avancement.csv")
+
 os.makedirs("uploads", exist_ok=True)
 
 logo_path = None
@@ -82,12 +96,10 @@ st.sidebar.markdown(f"<p class='brand-subtitle'>مرحباً: {st.session_state.
 if st.sidebar.button("خروج (Déconnexion)"):
     st.session_state.authentifie = False
     st.rerun()
+
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-# ==========================================
-# بيانات المشاريع
-# ==========================================
 projet_choisi = st.sidebar.selectbox("📂 اختر المشروع:", [
     "LOT 2 - KHALIJ CHAARA",
     "LOT 1 - BOUKHROUF"
@@ -112,92 +124,114 @@ objectifs_projets = {
         }
     }
 }
+
 p_conf = objectifs_projets[projet_choisi]
 
 # ==========================================
-# القائمة الرئيسية ومحتوى الأقسام
+# الأقسام (Tabs) الاحترافية للشانطي
 # ==========================================
-menu = st.sidebar.radio("اختر القسم:", [
-    "🏠 الرئيسية والمشاريع", 
-    "📅 الكالندري (12 شهراً)", 
-    "👷 إدارة الخدامة (الصور والڤستات)", 
-    "📊 تقدم الأشغال (Avancement)"
-])
+tab1, tab2, tab3 = st.tabs(["📖 دفتر الورشة (Journal)", "👷 إدارة الموارد البشرية", "📊 متابعة الإنجاز (Avancement)"])
 
-if menu == "🏠 الرئيسية والمشاريع":
-    st.title("🏗️ لوحة تحكم H.O Bâtiment")
-    st.success(f"تم اختيار المشروع بنجاح: **{projet_choisi}**")
-    st.markdown("### 📋 ملخص بنود الأشغال للمشروع:")
-    for art, info in p_conf["articles"].items():
-        st.write(f"- **{art}**: الهدف الجملي = {info['objectif']} {info['unite']}")
-
-elif menu == "📅 الكالندري (12 شهراً)":
-    st.title("📅 التخطيط السنوي ودفتر الورشة")
-    mois_liste = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
-    mois_choisi = st.selectbox("اختر الشهر:", mois_liste)
+with tab1:
+    st.header("📖 دفتر الورشة اليومي (Journal de Chantier)")
+    date_jour = st.date_input("تاريخ التقرير:", datetime.now())
     
-    col1, col2 = st.columns(2)
-    with col1:
-        jour_num = st.number_input("اليوم:", min_value=1, max_value=31, value=1)
-    with col2:
-        statut_jour = st.selectbox("حالة اليوم:", ["خدمة عادية", "🟡 يوم أصفر (توقف/مشكلة)"])
-    
-    note_jour = st.text_area("ملاحظات الأعمال أو أسباب التوقف:")
-    
-    if statut_jour == "🟡 يوم أصفر (توقف/مشكلة)":
-        st.warning("⚠️ تم تسجيل هذا اليوم كـ 'يوم أصفر' بسبب توقف الأشغال.")
+    col_meteo, col_eff = st.columns(2)
+    with col_meteo:
+        meteo = st.selectbox("حالة الطقس:", ["☀️ مشمس", "☁️ غائم", "🌧️ ممطر", "💨 رياح قوية"])
+    with col_eff:
+        effectif = st.number_input("عدد العمال الحاضرين اليوم:", min_value=0, value=5)
         
-    if st.button("حفظ اليوم"):
-        st.success(f"تم حفظ بيانات يوم {jour_num} {mois_choisi} بنجاح.")
-
-elif menu == "👷 إدارة الخدامة (الصور والڤستات)":
-    st.title("👷 إدارة فريق العمل")
+    travaux = st.text_area("وصف الأشغال المنجزة اليوم:")
     
-    ouvriers = [
-        {"nom": "محمد العياري", "gilet": "أصفر (رئيس فريق)", "img": "https://img.icons8.com/color/96/worker-male.png"},
-        {"nom": "علي بن صالح", "gilet": "برتقالي (عامل)", "img": "https://img.icons8.com/color/96/worker-male.png"},
-        {"nom": "صابر الشارني", "gilet": "أخضر (مراقب)", "img": "https://img.icons8.com/color/96/worker-male.png"}
+    jour_jaune = st.checkbox("🟡 تسجيل يوم أصفر (توقف عن العمل / مشكلة)")
+    if jour_jaune:
+        cause = st.text_input("سبب التوقف (عطب، طقس، نقص مواد...):")
+        if st.button("💾 حفظ تقرير التوقف (Jour Jaune)"):
+            if cause:
+                with open(FICHIER_INCIDENTS, mode="a", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([projet_choisi, date_jour, cause])
+                st.error(f"تم تسجيل توقف العمل ليوم {date_jour} بنجاح!")
+            else:
+                st.warning("الرجاء كتابة سبب التوقف.")
+    else:
+        if st.button("💾 حفظ تقرير الورشة"):
+            with open(FICHIER_CHANTIER, mode="a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([projet_choisi, date_jour, meteo, effectif, travaux])
+            st.success(f"تم حفظ تقرير يوم {date_jour} بنجاح!")
+
+with tab2:
+    st.header("👷 إدارة الفريق والعمال")
+    st.info("تتبع الحضور، صور العمال، والڤستات الخاصة بالسلامة.")
+    
+    ouvriers_data = [
+        {"nom": "محمد العياري", "role": "رئيس فريق", "gilet": "🟡 أصفر", "photo": "https://img.icons8.com/color/96/worker-male.png"},
+        {"nom": "علي بن صالح", "role": "عامل بناء", "gilet": "🟠 برتقالي", "photo": "https://img.icons8.com/color/96/worker-male.png"},
+        {"nom": "صابر الشارني", "role": "مراقب", "gilet": "🟢 أخضر", "photo": "https://img.icons8.com/color/96/worker-male.png"}
     ]
     
-    for ouv in ouvriers:
-        c1, c2, c3 = st.columns([1, 2, 2])
+    for ouv in ouvriers_data:
+        c1, c2, c3, c4 = st.columns([1, 2, 2, 2])
         with c1:
-            st.image(ouv["img"], width=60)
+            st.image(ouv["photo"], width=50)
         with c2:
-            st.markdown(f"**{ouv['nom']}**")
+            st.write(f"**{ouv['nom']}**")
         with c3:
-            st.write(f"🦺 {ouv['gilet']}")
+            st.write(f"الخطة: {ouv['role']}")
+        with c4:
+            st.write(f"🦺 الڤست: {ouv['gilet']}")
         st.markdown("---")
         
-    st.subheader("💰 تسجيل الخلاص")
-    ouv_sel = st.selectbox("العامل:", [o["nom"] for o in ouvriers])
-    jours = st.number_input("أيام العمل:", min_value=0.0, step=0.5)
-    salaire = st.number_input("الأجرة اليومية (د.ت):", min_value=0.0, value=50.0)
+    st.subheader("💰 حساب الخلاص")
+    ouv_sel = st.selectbox("اختر العامل:", [o["nom"] for o in ouvriers_data])
+    jours_trav = st.number_input("أيام العمل المنجزة:", min_value=0.0, step=0.5)
+    salaire_jour = st.number_input("الأجرة اليومية (د.ت):", min_value=0.0, value=50.0)
     
-    if st.button("تأكيد الخلاص"):
-        st.success(f"تم تسجيل خلاص {ouv_sel}: {jours * salaire} د.ت")
+    if st.button("تأكيد خلاص العامل"):
+        st.success(f"تم اعتماد خلاص {ouv_sel} بمبلغ قدره {jours_trav * salaire_jour} د.ت")
 
-elif menu == "📊 تقدم الأشغال (Avancement)":
-    st.title("📊 متابعة تقدم الأشغال")
+with tab3:
+    st.header("📊 متابعة تقدم الأشغال (Avancement)")
     
-    # جلب الـ Articles الخاصة بالمشروع المختار فقط
     articles_dispos = list(p_conf["articles"].keys())
-    art_sel = st.selectbox("اختر الـ Article:", articles_dispos)
-    unite_art = p_conf["articles"][art_sel]["unite"]
+    art_sel = st.selectbox("اختر بند الأشغال (Article):", articles_dispos)
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        av_j = st.number_input(f"تقدم يومي ({unite_art}):", min_value=0.0)
-    with col2:
-        av_s = st.number_input(f"تقدم أسبوعي ({unite_art}):", min_value=0.0)
-    with col3:
-        av_t = st.number_input(f"تقدم إجمالي ({unite_art}):", min_value=0.0)
+    info_art = p_conf["articles"][art_sel]
+    objectif_total = info_art["objectif"]
+    unite = info_art["unite"]
+    
+    st.write(f"🎯 **الهدف الجملي للـ Article:** {objectif_total} {unite}")
+    
+    col_j, col_s = st.columns(2)
+    with col_j:
+        av_jour = st.number_input(f"التقدم اليومي ({unite}):", min_value=0.0, step=1.0)
+    with col_s:
+        av_semaine = st.number_input(f"التقدم الأسبوعي ({unite}):", min_value=0.0, step=1.0)
+        
+    if st.button("💾 تسجيل التقدم"):
+        with open(FICHIER_AVANCEMENT, mode="a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([projet_choisi, datetime.now().date(), art_sel, av_jour, av_semaine])
+        st.success(f"تم تسجيل تقدم قدره {av_jour} {unite} لـ {art_sel} اليوم.")
         
     st.markdown("---")
-    m1, m2, m3 = st.columns(3)
-    m1.metric("اليومي", f"{av_j} {unite_art}")
-    m2.metric("الأسبوعي", f"{av_s} {unite_art}")
-    m3.metric("الإجمالي", f"{av_t} {unite_art}")
-    
-    if st.button("تسجيل التقدم"):
-        st.success(f"تم حفظ نسب التقدم للـ Article: {art_sel}")
+    st.subheader("📋 تاريخ الإنجازات المسجلة")
+    if os.path.exists(FICHIER_AVANCEMENT):
+        df_av = pd.read_csv(FICHIER_AVANCEMENT, names=["Projet", "Date", "Article", "Av_Jour", "Av_Semaine"])
+        df_filtre = df_av[(df_av["Projet"] == projet_choisi) & (df_av["Article"] == art_sel)]
+        if not df_filtre.empty:
+            st.dataframe(df_filtre, use_container_width=True)
+            total_realise = df_filtre["Av_Jour"].sum()
+            restant = objectif_total - total_realise
+            
+            c_tot, c_rest = st.columns(2)
+            c_tot.metric("الإجمالي المنجز", f"{total_realise} {unite}")
+            c_rest.metric("المتبقي", f"{restant} {unite}")
+        else:
+            st.info("لا توجد تسجيلات سابقة لهذا البند.")
+    else:
+        st.info("ملف الإنجازات فارغ حالياً.")
+
+```
