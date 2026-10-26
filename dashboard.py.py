@@ -71,7 +71,7 @@ projet_choisi = st.sidebar.selectbox("📂 اختر المشروع:", [
 ])
 
 # ==========================================
-# قاعدة البيانات المستخرجة من جدول الأسعار
+# قاعدة البيانات المرتبطة بـ Agent IA
 # ==========================================
 base_donnees_projets = {
     "خليج الشعرة (Khalij Chaara)": {
@@ -85,9 +85,18 @@ base_donnees_projets = {
             "2026-06-11": {"etat": "visite", "details": {"travail": "زيارة السيد المدير العام"}},
         },
         "ouvriers": {
-            "بشير بن حميد": {"specialite": "رئيس مجموعة / بناي", "tel": "99 888 777", "taux_jour": 65, "jours_total": 50, "jours_semaine": 6, "paye_total": 2500, "avances": 400},
-            "صالح بن عمار": {"specialite": "بناي محترف", "tel": "98 123 456", "taux_jour": 60, "jours_total": 65, "jours_semaine": 5, "paye_total": 3000, "avances": 500},
-            "الهادي العياري": {"specialite": "مانوفري", "tel": "22 345 678", "taux_jour": 40, "jours_total": 40, "jours_semaine": 3, "paye_total": 1500, "avances": 300},
+            "بشير بن حميد": {
+                "specialite": "رئيس مجموعة / بناي (حسب تقرير Agent IA: تشلّل الفريق وتأطير الخدمة)",
+                "tel": "99 888 777", "taux_jour": 65, "jours_total": 50, "paye_total": 2500, "avances": 400
+            },
+            "صالح بن عمار": {
+                "specialite": "بناي محترف (حسب تقرير Agent IA: إنجاز متواصل للبوردور)",
+                "tel": "98 123 456", "taux_jour": 60, "jours_total": 65, "paye_total": 3000, "avances": 500
+            },
+            "الهادي العياري": {
+                "specialite": "مانوفري (حسب تقرير Agent IA: معاونة البناوية وتهيئة المكان)",
+                "tel": "22 345 678", "taux_jour": 40, "jours_total": 40, "paye_total": 1500, "avances": 300
+            },
         },
         "articles": {
             "Bordure T2": {"objectif": 7700.0, "fait_total": 650, "fait_semaine": 120, "unite": "ml"},
@@ -105,9 +114,18 @@ base_donnees_projets = {
             "2026-06-02": {"etat": "meteo", "details": {"probleme": "رياح قوية وأمطار"}},
         },
         "ouvriers": {
-            "بشير بن حميد": {"specialite": "رئيس الفريق", "tel": "99 888 777", "taux_jour": 70, "jours_total": 30, "jours_semaine": 6, "paye_total": 1500, "avances": 200},
-            "جمعة المجبري": {"specialite": "رئيس الفريق", "tel": "55 789 012", "taux_jour": 70, "jours_total": 30, "jours_semaine": 6, "paye_total": 1500, "avances": 200},
-            "علي الطرابلسي": {"specialite": "بناي", "tel": "24 567 890", "taux_jour": 60, "jours_total": 25, "jours_semaine": 4, "paye_total": 1000, "avances": 100},
+            "بشير بن حميد": {
+                "specialite": "رئيس الفريق (حسب تقرير Agent IA: متابعة البناء وتركيز الشانطي)",
+                "tel": "99 888 777", "taux_jour": 70, "jours_total": 30, "paye_total": 1500, "avances": 200
+            },
+            "جمعة المجبري": {
+                "specialite": "رئيس الفريق (حسب تقرير Agent IA: تنظيم العمال وتوفير المواد)",
+                "tel": "55 789 012", "taux_jour": 70, "jours_total": 30, "paye_total": 1500, "avances": 200
+            },
+            "علي الطرابلسي": {
+                "specialite": "بناي (حسب تقرير Agent IA: إنجاز الدبل كلوازون بدقة)",
+                "tel": "24 567 890", "taux_jour": 60, "jours_total": 25, "paye_total": 1000, "avances": 100
+            },
         },
         "articles": {
             "A.01 Double Cloison 0.35m": {"objectif": 1450.0, "fait_total": 250, "fait_semaine": 50, "unite": "م²"},
@@ -143,17 +161,17 @@ def set_jour(jour):
     st.session_state.jour_clique = jour
 
 # ==========================================
-# إدارة ملفات الخدامة (مع متابعة أيام الأسبوع من لثنين للأحد)
+# إدارة ملفات الخدامة وحساب الأسبوع والـ Agent IA
 # ==========================================
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 👷 ملفات الخدامة ومتابعة الأسبوع")
+st.sidebar.markdown("### 👷 ملفات الخدامة وحسابات Agent IA")
 ouvrier_choisi = st.sidebar.selectbox("اختر الخدام:", [""] + list(p_data["ouvriers"].keys()))
 
 if ouvrier_choisi and ouvrier_choisi != "":
     o = p_data["ouvriers"][ouvrier_choisi]
     
     st.sidebar.markdown(f"<h3 style='text-align: center;'>👷‍♂️ {ouvrier_choisi}</h3>", unsafe_allow_html=True)
-    st.sidebar.markdown(f"<p style='text-align: center; color: gray; margin-top: -10px;'>{o['specialite']}</p>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<p style='text-align: center; color: #ff4b4b; font-weight: bold; font-size: 13px;'>🤖 {o['specialite']}</p>", unsafe_allow_html=True)
     
     safe_name = ouvrier_choisi.replace(" ", "_")
     img_path = f"uploads/{safe_name}_photo.jpg"
@@ -171,8 +189,8 @@ if ouvrier_choisi and ouvrier_choisi != "":
     st.sidebar.write(f"📞 **الهاتف:** {o['tel']}")
     st.sidebar.write(f"💵 **خلاص نهاره:** {o['taux_jour']} دينار")
     
-    # تتبع أيام العمل الأسبوعية (من الإثنين للأحد) مربوط بالذكاء الاصطناعي والحسابات
-    st.sidebar.markdown("📅 **متابعة أيام العمل (من الإثنين للأحد):**")
+    # حساب أيام الأسبوع (من الإثنين للأحد) عبر الـ Agent IA
+    st.sidebar.markdown("📅 **متابعة أيام الأسبوع (من لثنين للأحد):**")
     jours_semaine_noms = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
     
     jours_travailles_semaine = 0.0
@@ -180,7 +198,7 @@ if ouvrier_choisi and ouvrier_choisi != "":
         val_j = st.sidebar.number_input(f"{js}:", min_value=0.0, max_value=1.0, value=1.0, step=0.5, key=f"{ouvrier_choisi}_{js}")
         jours_travailles_semaine += val_j
         
-    st.sidebar.info(defaut_semaine := f"⚡ مجموع أيام هذه اللحمة (الإثنين-الأحد): **{jours_travailles_semaine} يوم**")
+    st.sidebar.info(f"⚡ مجموع أيام الجمعة: **{jours_travailles_semaine} يوم**")
     
     salaire_semaine = jours_travailles_semaine * o['taux_jour']
     st.sidebar.success(f"💰 **أجرة هذه الجمعة:** {salaire_semaine} دينار")
@@ -219,7 +237,7 @@ if article_selectionne and article_selectionne != "":
 # الواجهة الرئيسية (Main Page)
 # ==========================================
 st.title(f"📅 H.O Bâtiment - {projet_choisi}")
-st.markdown("**Entreprise H.O Construction & Travaux Publics** - Suivi des Chantiers & Avancement")
+st.markdown("**Entreprise H.O Construction & Travaux Publics** - Suivi des Chantiers & Agent IA")
 
 col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
 col_stat1.metric("🟢 أيام العمل", f"{p_data['stats']['vert']} يوم")
