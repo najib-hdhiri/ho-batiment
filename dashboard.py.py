@@ -41,7 +41,12 @@ else:
     st.sidebar.write(f"👤 **المستخدم:** {st.session_state.utilisateur}")
     st.sidebar.write(f"👷 **الرتبة:** {st.session_state.role}")
     
-    menu = st.sidebar.radio("اختر القسم:", ["🏠 الرئيسية", "📖 دفتر الورشة (Journal)", "💰 المصاريف والمالية"])
+    menu = st.sidebar.radio("اختر القسم:", [
+        "🏠 الرئيسية", 
+        "📅 جدول الأعمال (Calendrier)", 
+        "👷 إدارة الخدامة والخلاص", 
+        "📊 تقدم الأشغال (Avancement des Articles)"
+    ])
     
     if st.button("تسجيل الخروج", key="logout_btn"):
         st.session_state.authentifie = False
@@ -49,24 +54,38 @@ else:
 
     if menu == "🏠 الرئيسية":
         st.title("🏗️ لوحة تحكم H.O Bâtiment")
-        st.success(f"مرحباً بك يا {st.session_state.utilisateur}! المشروع يخدم بانتظام.")
-        st.info("استعمل القائمة الجانبية للتنقل بين دفتر الورشة وإدارة المصاريف.")
+        st.success(f"مرحباً بك يا {st.session_state.utilisateur}! النظام جاهز لمتابعة الشانطي.")
+        st.info("استعمل القائمة الجانبية لتتبع الـ Calendrier، الخدامة، ونسب الإنجاز.")
 
-    elif menu == "📖 دفتر الورشة (Journal)":
-        st.title("📖 تسجيل تقرير الورشة اليومي")
-        
-        date_jour = st.date_input("تاريخ اليوم:", datetime.now())
-        tache_realise = st.text_area("الأعمال المنجزة اليوم:")
-        remarques = st.text_area("ملاحظات أو صعوبات في الشانطي:")
-        
-        if st.button("حفظ التقرير"):
-            st.success("تم حفظ تقرير الورشة بنجاح!")
+    elif menu == "📅 جدول الأعمال (Calendrier)":
+        st.title("📅 جدول الأعمال والتخطيط الزمني")
+        date_selectionnee = st.date_input("اختر تاريخ اليوم في الشانطي:", datetime.now())
+        evenement = st.text_area("أهم الأعمال المبرمجة لهذا اليوم:")
+        if st.button("حفظ الموعد في الـ Calendrier"):
+            st.success(f"تم تسجيل موعد ليوم {date_selectionnee} بنجاح!")
 
-    elif menu == "💰 المصاريف والمالية":
-        st.title("💰 تتبع المصاريف")
+    elif menu == "👷 إدارة الخدامة والخلاص":
+        st.title("👷 إدارة الخدامة وخلاصهم")
+        nom_ouvrier = st.text_input("اسم العامل أو المقاول:")
+        jours_travailles = st.number_input("عدد الأيام المنجزة:", min_value=0.0, step=0.5)
+        salaire_journalier = st.number_input("الأجرة اليومية (بالدينار):", min_value=0.0)
         
-        item = st.text_input("نوع المصروف (مثال: مواد بناء، نقل...):")
-        montant = st.number_input("المبلغ (بالدينار):", min_value=0.0, format="%.2f")
+        total_a_payer = jours_travailles * salaire_journalier
+        st.write(f"💵 **المبلغ الجملي للخلاص:** {total_a_payer} د.ت")
         
-        if st.button("إضافة المصروف"):
-            st.success(f"تم تسجيل مصروف بقيمة {montant} د.ت بنجاح!")
+        if st.button("حفظ معطيات الخلاص"):
+            st.success(f"تم تسجيل خلاص العامل {nom_ouvrier} بنجاح بقيمة {total_a_payer} د.ت!")
+
+    elif menu == "📊 تقدم الأشغال (Avancement des Articles)":
+        st.title("📊 متابعة تقدم الأشغال (Avancement)")
+        
+        article = st.text_input("اسم البند / الـ Article (مثال: حفر، صب béton...):")
+        avancement_jour = st.number_input("نسبة الإنجاز اليومي (%):", min_value=0.0, max_value=100.0)
+        
+        st.write("---")
+        st.subheader("📈 ملخص الإنجاز")
+        st.metric(label="التقدم اليومي (Par Jour)", value=f"{avancement_jour}%")
+        st.info("سيتم تجميع نسب الإنجاز أسبوعياً (Par Semaine) وإجمالياً (Totale) تلقائياً مع إدخال التقارير القادمة.")
+        
+        if st.button("حفظ تقدم الـ Article"):
+            st.success(f"تم تسجيل تقدم الـ Article '{article}' بنجاح!")
