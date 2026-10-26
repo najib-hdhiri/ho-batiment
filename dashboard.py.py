@@ -3,106 +3,57 @@ import calendar
 from datetime import date
 import os
 
-st.set_page_config(
-    page_title="H.O Construction - Tableau de Bord",
-    page_icon="🏗️",
-    layout="wide"
-)
+st.set_page_config(page_title="H.O Construction", page_icon="🏗️", layout="wide")
 
-# ==========================================
-# تصميم CSS فخم ومنظم للملفات واللوغو
-# ==========================================
-st.markdown("""
-    <style>
-    .brand-container {
-        text-align: center;
-        background-color: #ffffff;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        margin-bottom: 20px;
-    }
-    .brand-title {
-        color: #ff4b4b;
-        font-size: 20px;
-        font-weight: bold;
-        margin: 5px 0 0 0;
-    }
-    .brand-subtitle {
-        color: gray;
-        font-size: 12px;
-        margin-top: 2px;
-        margin-bottom: 0;
-    }
-    .img-box {
-        border-radius: 10px;
-        border: 2px solid #ddd;
-        padding: 5px;
-        margin-bottom: 10px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+css_style = """
+<style>
+.brand-container { text-align: center; background-color: #ffffff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
+.brand-title { color: #ff4b4b; font-size: 20px; font-weight: bold; margin: 5px 0 0 0; }
+.brand-subtitle { color: gray; font-size: 12px; margin-top: 2px; margin-bottom: 0; }
+</style>
+"""
+st.markdown(css_style, unsafe_allow_html=True)
 
-# التأكد من وجود مجلد uploads لحفظ الصور
 os.makedirs("uploads", exist_ok=True)
 
-# جلب اللوغو من المجلد مباشرة
 logo_path = None
-if os.path.exists("uploads/logo_saved.jpg"):
-    logo_path = "uploads/logo_saved.jpg"
-elif os.path.exists("logo.jpg"):
-    logo_path = "logo.jpg"
-elif os.path.exists("logo.png"):
-    logo_path = "logo.png"
+for p in ["uploads/logo_saved.jpg", "logo.jpg", "logo.png"]:
+    if os.path.exists(p):
+        logo_path = p
+        break
 
-st.sidebar.markdown(
-    '<div class="brand-container">',
-    unsafe_allow_html=True
-)
-
+st.sidebar.markdown('<div class="brand-container">', unsafe_allow_html=True)
 if logo_path:
     st.sidebar.image(logo_path, width=110)
 else:
-    st.sidebar.markdown(
-        "<h1 style='text-align: center; margin:0;'>🏗️</h1>",
-        unsafe_allow_html=True
-    )
+    st.sidebar.markdown("<h1 style='text-align: center; margin:0;'>🏗️</h1>", unsafe_allow_html=True)
 
-st.sidebar.markdown(
-    "<p class='brand-title'>H.O Bâtiment</p>",
-    unsafe_allow_html=True
-)
-st.sidebar.markdown(
-    "<p class='brand-subtitle'>Construction & Travaux Publics</p>",
-    unsafe_allow_html=True
-)
+st.sidebar.markdown("<p class='brand-title'>H.O Bâtiment</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<p class='brand-subtitle'>Construction & Travaux Publics</p>", unsafe_allow_html=True)
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-projet_choisi = st.sidebar.selectbox("📂 اختر المشروع:", [
-    "خليج الشعرة (Khalij Chaara)", 
-    "بوخروف (Boukharouf)"
-])
+projets_noms = ["خليج الشعرة (Khalij Chaara)", "بوخروف (Boukharouf)"]
+projet_choisi = st.sidebar.selectbox("📂 اختر المشروع:", projets_noms)
 
-base_donnees_projets = {
-    "خليج الشعرة (Khalij Chaara)": {
-        "date_debut": date(2026, 5, 18),
-        "stats": {"vert": 65, "jaune": 44, "gris": 12, "meteo": 8, "conge": 5},
-        "jours": {
-            "2026-05-18": {"etat": "vert", "details": {"travail": "انطلاق الشانطي ووضع البوردور T2"}},
-            "2026-05-19": {"etat": "jaune", "details": {"probleme": "أرضية غير مهيئة"}},
-            "2026-05-26": {"etat": "meteo", "details": {"probleme": "طقس خايب (أمطار وعواصف)"}},
-            "2026-05-29": {"etat": "conge", "details": {"travail": "يوم راحة عادي"}},
-            "2026-06-11": {"etat": "visite", "details": {"travail": "زيارة السيد المدير العام"}},
-        },
-        "ouvriers": {
-            "بشير بن حميد": {
-                "specialite": "رئيس مجموعة / بناي",
-                "tel": "99 888 777",
-                "taux_jour": 65,
-                "jours_total": 50,
-                "jours_semaine": 6,
-                "paye_total": 2500,
-                "avances": 400,
-            },
-            "صالح بن عمار": {
+# بناء قاعدة البيانات بطريقة محمية ضد أخطاء النسخ في الهاتف
+base_donnees_projets = {}
+
+# --- المشروع الأول ---
+p1_jours = {
+    "2026-05-18": dict(etat="vert", travail="انطلاق الشانطي ووضع البوردور T2", probleme=""),
+    "2026-05-19": dict(etat="jaune", travail="", probleme="أرضية غير مهيئة"),
+    "2026-05-26": dict(etat="meteo", travail="", probleme="طقس خايب (أمطار وعواصف)"),
+    "2026-05-29": dict(etat="conge", travail="يوم راحة عادي", probleme=""),
+    "2026-06-11": dict(etat="visite", travail="زيارة السيد المدير العام", probleme="")
+}
+
+p1_ouvriers = {}
+p1_ouvriers["بشير بن حميد"] = dict(specialite="رئيس مجموعة / بناي", tel="99 888 777", taux_jour=65, jours_total=50, jours_semaine=6, paye_total=2500, avances=400)
+p1_ouvriers["صالح بن عمار"] = dict(specialite="بناي محترف", tel="98 123 456", taux_jour=60, jours_total=65, jours_semaine=5, paye_total=3000, avances=500)
+p1_ouvriers["الهادي العياري"] = dict(specialite="مانوفري", tel="22 345 678", taux_jour=40, jours_total=40, jours_semaine=3, paye_total=1500, avances=300)
+
+p1_articles = {}
+p1_articles["Bordure T2"] = dict(objectif=1000, fait_total=650, fait_semaine=120, unite="ml")
+p1_articles["Bordure Mince P2"] = dict(objectif=800, fait_total=400, fait_semaine=80, unite="ml")
+p1_articles["Caniveau CS2"] = dict(objectif=5
