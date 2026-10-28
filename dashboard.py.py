@@ -7,7 +7,7 @@ import json
 st.set_page_config(page_title="H.O Construction - Tableau de Bord IA", page_icon="🏗️", layout="wide")
 
 # ==========================================
-# تصميم CSS متجاوب مع التلفون والبيسي
+# تصميم CSS متجاوب مع التلفون والبيسي + مربعات خضراء
 # ==========================================
 st.markdown("""
     <style>
@@ -30,6 +30,19 @@ st.markdown("""
         font-size: 12px;
         margin-top: 2px;
         margin-bottom: 0;
+    }
+    /* تكبير مربعات الكوشاج للتلفون وتلوينها بالأخضر عند التفعيل */
+    input[type="checkbox"] {
+        transform: scale(1.3);
+        accent-color: #28a745 !important;
+        cursor: pointer;
+    }
+    .worker-row {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border-right: 4px solid #28a745;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -137,7 +150,6 @@ def load_db():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # ضمان وجود الحقول الجديدة في حال كان الملف قديماً
                 for proj in data:
                     data[proj].setdefault("photos_chantier", [])
                     data[proj].setdefault("models_3d", [])
@@ -155,6 +167,7 @@ if "db" not in st.session_state:
     st.session_state.db = load_db()
 
 base_donnees_projets = st.session_state.db
+jours_semaine_noms = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
 
 # ==========================================
 # إدارة اللوغو والقائمة الجانبية
@@ -204,7 +217,7 @@ st.title(f"🤖 H.O Bâtiment — {projet_choisi}")
 
 with st.expander("📱 **مركز التحكم السريع والـ Agent IA (خدامة، أشغال، صور، 3D، وبلانات)**", expanded=True):
     tab_ouv, tab_art, tab_jour, tab_photos, tab_3d, tab_plans = st.tabs([
-        "👷 1. الخدامة", 
+        "👷 1. حضور الخدامة (كوشاج سريع ✅)", 
         "🧱 2. الأشغال", 
         "📅 3. يوميات الشانطي",
         "📸 4. صور الشانطي",
@@ -212,27 +225,54 @@ with st.expander("📱 **مركز التحكم السريع والـ Agent IA (�
         "📐 6. قراءة البلانات (IA)"
     ])
     
-    # 1. الخدامة
+    # 1. الخدامة بمربعات الكوشاج الخضراء السريعة (Checkboxes)
     with tab_ouv:
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            ouv_mob = st.selectbox("اختر الخدام:", list(p_data["ouvriers"].keys()), key="mob_ouv")
-        with c2:
-            jour_sem_mob = st.selectbox("اليوم:", ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"], key="mob_js")
-            val_presence = st.selectbox("الحضور:", [1.0, 0.5, 0.0], format_func=lambda x: "نهار كامل (1)" if x==1.0 else ("نصف نهار (0.5)" if x==0.5 else "غايب (0)"), key="mob_pres")
-        with c3:
-            avance_plus = st.number_input("مبلغ جديد (دينار):", min_value=0.0, value=0.0, step=10.0, key="mob_av")
-            type_paiement = st.radio("نوع الدفع:", ["آفونس (Avance)", "خلاص صافي (Payé)"], horizontal=True)
+        st.markdown("##### ✅ **ورقة الحضور السريعة (اكوشي النهار بضغطة وحدة يولي أخضر = حاضر ويتسجل وحدو):**")
+        
+        changement_presence = False
+        for nom_ouv, info_ouv in p_data["ouvriers"].items():
+            st.markdown(f"<div class='worker-row'><b>👷‍♂️ {nom_ouv}</b> <span style='color:gray; font-size:13px;'>({info_ouv['specialite']} — {info_ouv['taux_jour']} د/يوم)</span></div>", unsafe_allow_html=True)
+            cols_check = st.columns(8)
+            total_sem = 0.0
+            for idx_j, js in enumerate(jours_semaine_noms):
+                est_present = float(info_ouv.get("semaine", {}).get(js, 0.0)) >= 0.5
+                nouvelle_val = cols_check[idx_j].checkbox(
+                    f"{js}", 
+                    value=est_present, 
+                    key=f"chk_mob_{projet_choisi}_{nom_ouv}_{js}"
+                )
+                val_num = 1.0 if nouvelle_val else 0.0
+                if info_ouv["semaine"].get(js, 0.0) != val_num:
+                    info_ouv["semaine"][js] = val_num
+                    changement_presence = True
+                total_sem += val_num
             
-        if st.button("✅ حفظ تحديث الخدام فوراً", use_container_width=True):
-            p_data["ouvriers"][ouv_mob]["semaine"][jour_sem_mob] = val_presence
-            if avance_plus > 0:
-                if type_paiement == "آفونس (Avance)":
-                    p_data["ouvriers"][ouv_mob]["avances"] += avance_plus
-                else:
-                    p_data["ouvriers"][ouv_mob]["paye_total"] += avance_plus
+            salaire_sem_ouv = total_sem * info_ouv['taux_jour']
+            cols_check[7].markdown(f"**{int(total_sem)} أيام**<br><span style='color:#28a745; font-weight:bold;'>{int(salaire_sem_ouv)} د</span>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin: 5px 0 12px 0;'>", unsafe_allow_html=True)
+
+        if changement_presence:
             save_db(base_donnees_projets)
-            st.success(f"🤖 Agent IA: تم تحديث حساب وحضور ({ouv_mob}) بنجاح!")
+            st.toast("✅ تم حفظ الحضور وتحديث الحساب تلقائياً!")
+
+        st.markdown("##### 💰 **تسجيل آفونس (Avance) أو خلاص جديد:**")
+        c_av1, c_av2, c_av3, c_av4 = st.columns([2, 2, 2, 2])
+        with c_av1:
+            ouv_mob = st.selectbox("اختر الخدام:", list(p_data["ouvriers"].keys()), key="mob_ouv")
+        with c_av2:
+            avance_plus = st.number_input("المبلغ (دينار):", min_value=0.0, value=0.0, step=10.0, key="mob_av")
+        with c_av3:
+            type_paiement = st.radio("نوع الدفع:", ["آفونس (Avance)", "خلاص صافي (Payé)"], horizontal=True)
+        with c_av4:
+            st.write("")
+            if st.button("💵 تسجيل المبلغ", use_container_width=True):
+                if avance_plus > 0:
+                    if type_paiement == "آفونس (Avance)":
+                        p_data["ouvriers"][ouv_mob]["avances"] += avance_plus
+                    else:
+                        p_data["ouvriers"][ouv_mob]["paye_total"] += avance_plus
+                    save_db(base_donnees_projets)
+                    st.success(f"🤖 Agent IA: تم تسجيل {avance_plus} د لـ ({ouv_mob}) بنجاح!")
 
     # 2. تقدم البنود
     with tab_art:
@@ -301,7 +341,6 @@ with st.expander("📱 **مركز التحكم السريع والـ Agent IA (�
                 entry = {"date": d_str, "article": art_photo, "desc": desc_photo or "صورة ميدانية", "path": filename}
                 p_data["photos_chantier"].append(entry)
                 
-                # ربط الصورة باليوم في الرزنامة
                 if d_str not in p_data["jours"]:
                     p_data["jours"][d_str] = {"etat": "vert", "details": {"travail": desc_photo or "توثيق بالصور", "photo": filename}}
                 else:
@@ -429,18 +468,18 @@ if ouvrier_choisi and ouvrier_choisi != "":
     st.sidebar.write(f"📞 **الهاتف:** {o['tel']}")
     st.sidebar.write(f"💵 **خلاص نهاره:** {o['taux_jour']} دينار")
     
-    st.sidebar.markdown("📅 **أيام الحضور (من الإثنين للأحد):**")
-    jours_semaine_noms = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
+    st.sidebar.markdown("📅 **أيام الحضور (كوشاج سريع ✅):**")
     
     jours_travailles_semaine = 0.0
     for js in jours_semaine_noms:
-        val_actuelle = float(o.get("semaine", {}).get(js, 1.0))
-        val_j = st.sidebar.number_input(f"{js}:", min_value=0.0, max_value=1.0, value=val_actuelle, step=0.5, key=f"{ouvrier_choisi}_{js}")
+        present_side = float(o.get("semaine", {}).get(js, 1.0)) >= 0.5
+        coche_side = st.sidebar.checkbox(f"{js}", value=present_side, key=f"side_chk_{projet_choisi}_{ouvrier_choisi}_{js}")
+        val_j = 1.0 if coche_side else 0.0
         o["semaine"][js] = val_j
         jours_travailles_semaine += val_j
     save_db(base_donnees_projets)
         
-    st.sidebar.info(f"⚡ مجموع أيام هذه الجمعة: **{jours_travailles_semaine} يوم**")
+    st.sidebar.info(f"⚡ مجموع أيام هذه الجمعة: **{int(jours_travailles_semaine)} أيام**")
     
     salaire_semaine = jours_travailles_semaine * o['taux_jour']
     st.sidebar.success(f"💰 **أجرة هذه الجمعة:** {salaire_semaine} دينار")
