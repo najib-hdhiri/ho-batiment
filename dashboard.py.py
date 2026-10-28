@@ -138,4 +138,97 @@ if jour:
     # 2. تعديل حضور الخدامة في هذا اليوم القديم
     with tab_j_ouv:
         st.write("ضع علامة على العمال الذين حضروا في هذا التاريخ بالتحديد:")
-        for nom_ouv, info_ouv in p
+        for nom_ouv, info_ouv in p_data["ouvriers"].items():
+            est_present = j_data["presences"].get(nom_ouv, 0.0) >= 0.5
+            cocher = st.checkbox(f"👷‍♂️ {nom_ouv} ({info_ouv['specialite']})", value=est_present, key=f"chk_hist_{jour}_{nom_ouv}")
+            nouvelle_val_hist = 1.0 if cocher else 0.0
+            
+            if j_data["presences"].get(nom_ouv, 0.0) != nouvelle_val_hist:
+                # إذا قام بتغيير الحضور، نعدل مجموع أيام العامل أوتوماتيكياً
+                diff = nouvelle_val_hist - j_data["presences"].get(nom_ouv, 0.0)
+                info_ouv["jours_total"] += diff
+                j_data["presences"][nom_ouv] = nouvelle_val_hist
+                save_db(base_donnees_projets)
+                st.toast(f"✅ تم تصحيح حضور {nom_ouv} وتحديث مجموع أيامه!")
+
+    # 3. تعديل أو إضافة أشغال في هذا اليوم
+    with tab_j_art:
+        st.write("الكميات المنجزة المسجلة في هذا اليوم:")
+        for art_nom, qty in list(j_data["avancement"].items()):
+            st.info(f"🧱 **{art_nom}:** {qty} {p_data['articles'][art_nom]['unite']}")
+            
+        st.write("---")
+        c_art1, c_art2, c_art3 = st.columns([2, 2, 1])
+        with c_art1:
+            art_hist = st.selectbox("إضافة/تعديل بند:", list(p_data["articles"].keys()), key=f"art_h_{jour}")
+        with c_art2:
+            qty_hist = st.number_input(f"الكمية ({p_data['articles'][art_hist]['unite']}):", min_value=0.0, step=1.0, key=f"qty_h_{jour}")
+        with c_art3:
+            st.write("")
+            if st.button("➕ حفظ الكمية", key=f"btn_h_{jour}"):
+                ancienne_qty = j_data["avancement"].get(art_hist, 0.0)
+                diff_qty = qty_hist - ancienne_qty
+                p_data["articles"][art_hist]["fait_total"] += diff_qty
+                j_data["avancement"][art_hist] = qty_hist
+                save_db(base_donnees_projets)
+                st.success(f"تم تسجيل {qty_hist} لـ {art_hist} وتحديث المجموع!")
+
+    # 4. صورة الشانطي لذلك اليوم
+    with tab_j_ph:
+        photo_existante = j_data.get("photo", "")
+        if photo_existante and os.path.exists(photo_existante):
+            st.image(photo_existante, caption=f"📸 صورة الشانطي ليوم {jour}", width=350)
+        else:
+            img_hist = st.file_uploader("📂 إضافة صورة لهذا اليوم بأثر رجعي:", type=["jpg", "png", "jpeg"], key=f"ph_h_{jour}")
+            if img_hist and st.button("💾 حفظ الصورة", key=f"btn_ph_{jour}"):
+                path_h_ph = f"uploads/chantier_photos/{jour}_retro.jpg"
+                with open(path_h_ph, "wb") as f:
+                    f.write(img_hist.getbuffer())
+                j_data["photo"] = path_h_ph
+                save_db(base_donnees_projets)
+                st.success("تم ربط الصورة باليوم!")
+else:
+    st.markdown("👉 **انقر على أي يوم في الرزنامة أسفله لاستعراض وتعديل يوميات الشانطي القديمة (آلة الزمن):**")
+
+st.markdown("---")
+
+# ==========================================
+# رسم الرزنامة
+# ==========================================
+mois_arabes = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+annee = date_debut.year
+mois_a_afficher = list(range(date_debut.month, 13))
+
+def get_couleur_jour(date_str):
+    if date_str in donnees_chantier:
+        etat = donnees_chantier[date_str].get("etat", "vert")
+        if etat == "vert": return "🟢"
+        if etat == "visite": return "📋"
+        if etat == "jaune": return "🟡"
+        if etat == "meteo": return "🌧️"
+        if etat == "conge": return "🔵"
+    return "⬜"
+
+for i in range(0, len(mois_a_afficher), 2):
+    col1, col2 = st.columns(2)
+    m1 = mois_a_afficher[i]
+    with col1:
+        st.markdown(f"<h5 style='text-align: center; background-color: #f0f2f6; padding: 5px; border-radius: 5px;'>شهر {mois_arabes[m1-1]} {annee}</h5>", unsafe_allow_html=True)
+        jours_semaine = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
+        cols_j1 = st.columns(7)
+        for k, j in enumerate(jours_semaine): cols_j1[k].markdown(f"<div style='text-align: center; font-size: 11px; font-weight: bold;'>{j[:4]}</div>", unsafe_allow_html=True)
+        
+        for semaine in calendar.monthcalendar(annee, m1):
+            cols = st.columns(7)
+            for k, num_jour in enumerate(semaine):
+                if num_jour == 0: cols[k].write("")
+                else:
+                    date_str = f"{annee}-{m1:02d}-{num_jour:02d}"
+                    if date(annee, m1, num_jour) < date_debut: cols[k].markdown(f"<div style='text-align:center; color:grey; font-size: 12px;'>🚫</div>", unsafe_allow_html=True)
+                    else: cols[k].button(f"{get_couleur_jour(date_str)} {num_jour}", key=f"btn_{projet_choisi}_{date_str}", on_click=set_jour, args=(date_str,), use_container_width=True)
+                        
+    if i + 1 < len(mois_a_afficher):
+        m2 = mois_a_afficher[i+1]
+        with col2:
+            st.markdown(f"<h5 style='text-align: center; background-color: #f0f2f6; padding: 5px; border-radius: 5px;'>شهر {mois_arabes[m2-1]} {annee}</h5>", unsafe_allow_html=True)
+            cols_j2 = st
