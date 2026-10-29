@@ -3,7 +3,6 @@ import calendar
 from datetime import date, timedelta
 import os
 import json
-import urllib.parse
 import pandas as pd
 
 calendar.setfirstweekday(calendar.MONDAY)
@@ -17,9 +16,7 @@ st.markdown("""
     .brand-subtitle { color: gray; font-size: 12px; margin-top: 2px; margin-bottom: 0; }
     input[type="checkbox"] { transform: scale(1.3); accent-color: #28a745 !important; cursor: pointer; }
     .worker-row { background-color: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #28a745; }
-    .share-btn { display: inline-block; padding: 10px 15px; border-radius: 8px; color: white !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 8px; }
-    .wa-btn { background-color: #25D366; }
-    .mail-btn { background-color: #1976D2; }
+    .download-btn { display: inline-block; padding: 10px 15px; border-radius: 8px; color: white !important; background-color: #2e7d32; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 8px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -145,7 +142,7 @@ if not logo_path:
 st.sidebar.markdown("---")
 st.sidebar.info(f"📂 **المشروع:** {projet_choisi}")
 
-# 1. البحث المتقدم مع زر "بحث" فعلي
+# 1. البحث المتقدم
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔍 بحث متقدم (Recherche IA)")
 txt_input_rech = st.sidebar.text_input("🔎 ابحث عن اسم خدام أو بند:", value=st.session_state.query_recherche_active, placeholder="bechir, بشير, bordure...")
@@ -171,7 +168,7 @@ elif filtre_temps == "بين تاريخين":
     d_debut_f = c1.date_input("من:", value=date_debut)
     d_fin_f = c2.date_input("إلى:", value=date.today())
 
-# 2. ملفات الخدامة وحسابات Agent IA في اليسار (أيام الحضور بعدد الأيام دون كوشاج + تعديل الهاتف وخلاص النهار)
+# 2. ملفات الخدامة وحسابات Agent IA في اليسار
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 👷 ملفات الخدامة وحسابات Agent IA")
 liste_ouv_filtree = [k for k in p_data["ouvriers"].keys() if match_smart(k, query_actuelle)]
@@ -199,7 +196,6 @@ if ouvrier_choisi and ouvrier_choisi != "":
 
     st.sidebar.markdown("---")
     
-    # إمكانية تعديل رقم الهاتف وخلاص اليوم من القائمة اليسرى
     with st.sidebar.expander("✏️ تعديل الهاتف وخلاص النهار"):
         nouveau_tel = st.text_input("رقم الهاتف:", value=o.get("tel", "-"), key=f"tel_ed_{ouvrier_choisi}")
         nouveau_taux = st.number_input("خلاص النهار (د):", min_value=10.0, value=float(o['taux_jour']), step=5.0, key=f"taux_ed_{ouvrier_choisi}")
@@ -213,7 +209,6 @@ if ouvrier_choisi and ouvrier_choisi != "":
     st.sidebar.write(f"📞 **الهاتف:** {o.get('tel', '-')}")
     st.sidebar.write(f"💵 **خلاص نهاره:** {o['taux_jour']} دينار")
     
-    # حساب أيام الحضور وجمعها (عرض عدد الأيام فقط بدون كوشاج)
     jours_semaine_compte = sum(float(v) for v in o.get("semaine", {}).values() if float(v) >= 0.5)
     date_cloture_str = o.get("date_cloture", p_data["date_debut"])
     date_cloture_obj = date.fromisoformat(date_cloture_str)
@@ -279,22 +274,58 @@ if article_selectionne and article_selectionne != "":
     reste = max(tache_trouvee['objectif'] - tache_trouvee['fait_total'], 0.0)
     st.sidebar.write(f"⏳ **المتبقي بالعقد:** {reste} {unite_a}")
 
-# 4. إرسال التقارير عبر WhatsApp و Email في اليسار
+# 4. التنزيل على شكل Excel (التقارير اليومية والشهرية)
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📩 التقارير اليومية (WhatsApp / Email)")
-date_rap = st.sidebar.date_input("تاريخ التقرير:", value=date.today(), key="side_rep_d")
-d_rap_str = date_rap.isoformat()
-j_rap_info = donnees_chantier.get(d_rap_str, {})
-etat_rap_map = {"vert": "يوم عمل عادي 🟢", "jaune": "إيقاف أشغال 🟡", "meteo": "سوء أحوال جوية 🌧️", "conge": "راحة 🔵"}
-etat_rap_txt = etat_rap_map.get(j_rap_info.get("etat", "vert"), "عمل 🟢")
-note_rap_txt = j_rap_info.get("details", {}).get("travail") or j_rap_info.get("details", {}).get("probleme", "اعتيادي")
-ouv_actifs_sem = [k for k, v in p_data["ouvriers"].items() if v.get("statut", "نشط") == "نشط"]
+st.sidebar.markdown("### 📥 التنزيل بصيغة Excel (Google Drive)")
 
-texte_rapport_auto = f"🏗️ *تقرير شانطي H.O Bâtiment*\n📅 التاريخ: {d_rap_str}\n📌 الحالة: {etat_rap_txt}\n📝 التفاصيل: {note_rap_txt}\n👷 العمال النشطون: {len(ouv_actifs_sem)}\n"
-enc_msg = urllib.parse.quote(texte_rapport_auto)
-enc_sub = urllib.parse.quote(f"تقرير شانطي - {d_rap_str}")
-st.sidebar.markdown(f'<a href="https://wa.me/?text={enc_msg}" target="_blank" class="share-btn wa-btn">🟢 إرسال عبر WhatsApp</a>', unsafe_allow_html=True)
-st.sidebar.markdown(f'<a href="mailto:?subject={enc_sub}&body={enc_msg}" target="_blank" class="share-btn mail-btn">📧 إرسال عبر Email</a>', unsafe_allow_html=True)
+# إعداد ملف Excel للعمال والمالية
+data_ouv_export = []
+for k_o, v_o in p_data["ouvriers"].items():
+    js = sum(float(x) for x in v_o.get("semaine", {}).values())
+    dc = date.fromisoformat(v_o.get("date_cloture", p_data["date_debut"]))
+    jd = calc_worker_days_period(p_data, k_o, dc, date.today())
+    ja = js + jd
+    mo = ja * v_o["taux_jour"]
+    av = v_o.get("avances", 0.0)
+    re = mo - av
+    data_ouv_export.append({
+        "الخدام": k_o, "الاختصاص": v_o["specialite"], "الهاتف": v_o.get("tel", "-"),
+        "الوضعية": v_o.get("statut", "نشط"), "تاريخ آخر خلاص": v_o.get("date_cloture", "-"),
+        "أيام العمل": ja, "اليومية (د)": v_o["taux_jour"], "المستحق (د)": mo, "الآفونس (د)": av, "الصافي الباقي (د)": re
+    })
+df_export_ouv = pd.DataFrame(data_ouv_export)
+csv_ouv_data = df_export_ouv.to_csv(index=False, encoding="utf-8-sig")
+
+st.sidebar.download_button(
+    label="📥 تنزيل تقرير أجور العمال (Excel/CSV)",
+    data=csv_ouv_data,
+    file_name=f"Rapport_Ouvriers_{date.today().isoformat()}.csv",
+    mime="text/csv",
+    use_container_width=True
+)
+
+# إعداد ملف Excel لتقدم الأشغال (التقرير الشهري والمتابعة)
+data_art_export = []
+for k_a, v_a in p_data["articles"].items():
+    obj = v_a["objectif"]
+    fait = v_a["fait_total"]
+    sem = v_a.get("fait_semaine", 0.0)
+    rem = max(obj - fait, 0.0)
+    pct = round((fait / obj) * 100, 1) if obj > 0 else 0
+    data_art_export.append({
+        "البند": k_a, "الوحدة": v_a["unite"], "الهدف التعاقدي": obj,
+        "المنجز الجملي": fait, "إنجاز الأسبوع": sem, "المتبقي": rem, "نسبة الإنجاز (%)": pct
+    })
+df_export_art = pd.DataFrame(data_art_export)
+csv_art_data = df_export_art.to_csv(index=False, encoding="utf-8-sig")
+
+st.sidebar.download_button(
+    label="📥 تنزيل تقرير الأشغال والتقدم (Excel/CSV)",
+    data=csv_art_data,
+    file_name=f"Rapport_Articles_{date.today().isoformat()}.csv",
+    mime="text/csv",
+    use_container_width=True
+)
 
 
 # ==========================================
