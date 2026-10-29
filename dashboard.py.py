@@ -82,6 +82,7 @@ def load_db():
                 for o_k, o_v in p["ouvriers"].items():
                     o_v.setdefault("statut", "نشط")
                     o_v.setdefault("date_cloture", p["date_debut"])
+                    o_v.setdefault("tel", "99 000 000")
                     o_v.setdefault("semaine", {j: 0.0 for j in jours_semaine_noms})
                 return data
         except Exception: pass
@@ -102,6 +103,7 @@ date_debut = date.fromisoformat(p_data["date_debut"])
 
 if 'jour_clique' not in st.session_state: st.session_state.jour_clique = None
 if 'mode_edition_presence' not in st.session_state: st.session_state.mode_edition_presence = False
+if 'query_recherche_active' not in st.session_state: st.session_state.query_recherche_active = ""
 
 def set_jour(jour): st.session_state.jour_clique = jour
 
@@ -117,7 +119,7 @@ def calc_worker_days_period(p_data, nom_ouv, start_d=None, end_d=None):
     return total_d
 
 # ==========================================
-# إدارة اللوغو والقائمة الجانبية (الجهة اليسرى الأصلية الكاملة)
+# إدارة اللوغو والقائمة الجانبية (Sidebar)
 # ==========================================
 logo_path = None
 for p in ["uploads/logo_saved.jpg", "logo.jpg", "logo.png"]:
@@ -143,10 +145,15 @@ if not logo_path:
 st.sidebar.markdown("---")
 st.sidebar.info(f"📂 **المشروع:** {projet_choisi}")
 
-# 1. البحث المتقدم
+# 1. البحث المتقدم مع زر "بحث" فعلي
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔍 بحث متقدم (Recherche IA)")
-mot_cle_recherche = st.sidebar.text_input("🔎 ابحث عن اسم خدام أو بند:", placeholder="bechir, بشير, bordure...")
+txt_input_rech = st.sidebar.text_input("🔎 ابحث عن اسم خدام أو بند:", value=st.session_state.query_recherche_active, placeholder="bechir, بشير, bordure...")
+if st.sidebar.button("🔍 تنفيذ البحث", use_container_width=True):
+    st.session_state.query_recherche_active = txt_input_rech
+    st.rerun()
+
+query_actuelle = st.session_state.query_recherche_active
 
 filtre_temps = st.sidebar.selectbox("📅 فترة المتابعة:", ["من تاريخ وقف الحساب (الخلاص)", "بالجمعة (الأسبوع الحالي)", "بالشهر", "بين تاريخين"])
 d_debut_f, d_fin_f = None, None
@@ -164,12 +171,12 @@ elif filtre_temps == "بين تاريخين":
     d_debut_f = c1.date_input("من:", value=date_debut)
     d_fin_f = c2.date_input("إلى:", value=date.today())
 
-# 2. ملفات الخدامة وحسابات Agent IA في اليسار (القائمة المنسدلة كما كانت)
+# 2. ملفات الخدامة وحسابات Agent IA في اليسار (أيام الحضور بعدد الأيام دون كوشاج + تعديل الهاتف وخلاص النهار)
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 👷 ملفات الخدامة وحسابات Agent IA")
-liste_ouv_filtree = [k for k in p_data["ouvriers"].keys() if match_smart(k, mot_cle_recherche)]
+liste_ouv_filtree = [k for k in p_data["ouvriers"].keys() if match_smart(k, query_actuelle)]
 options_ouv = [""] + liste_ouv_filtree
-index_auto_ouv = 1 if (mot_cle_recherche.strip() and len(liste_ouv_filtree) >= 1) else 0
+index_auto_ouv = 1 if (query_actuelle.strip() and len(liste_ouv_filtree) >= 1) else 0
 ouvrier_choisi = st.sidebar.selectbox("اختر الخدام للمعاينة:", options_ouv, index=index_auto_ouv)
 
 if ouvrier_choisi and ouvrier_choisi != "":
@@ -191,32 +198,34 @@ if ouvrier_choisi and ouvrier_choisi != "":
             st.rerun()
 
     st.sidebar.markdown("---")
-    st.sidebar.write(f"📞 **الهاتف:** {o['tel']}")
+    
+    # إمكانية تعديل رقم الهاتف وخلاص اليوم من القائمة اليسرى
+    with st.sidebar.expander("✏️ تعديل الهاتف وخلاص النهار"):
+        nouveau_tel = st.text_input("رقم الهاتف:", value=o.get("tel", "-"), key=f"tel_ed_{ouvrier_choisi}")
+        nouveau_taux = st.number_input("خلاص النهار (د):", min_value=10.0, value=float(o['taux_jour']), step=5.0, key=f"taux_ed_{ouvrier_choisi}")
+        if st.button("💾 حفظ التعديلات", key=f"btn_save_edit_{ouvrier_choisi}", use_container_width=True):
+            o["tel"] = nouveau_tel
+            o["taux_jour"] = nouveau_taux
+            save_db(base_donnees_projets)
+            st.sidebar.success("تم التعديل بنجاح!")
+            st.rerun()
+
+    st.sidebar.write(f"📞 **الهاتف:** {o.get('tel', '-')}")
     st.sidebar.write(f"💵 **خلاص نهاره:** {o['taux_jour']} دينار")
     
-    st.sidebar.markdown("📅 **أيام الحضور (كوشاج سريع ✅):**")
-    jours_travailles_semaine = 0.0
-    for js in jours_semaine_noms:
-        present_side = float(o.get("semaine", {}).get(js, 1.0)) >= 0.5
-        coche_side = st.sidebar.checkbox(f"{js}", value=present_side, key=f"side_chk_{projet_choisi}_{ouvrier_choisi}_{js}", disabled=(statut_ouv != "نشط"))
-        val_j = 1.0 if coche_side else 0.0
-        o["semaine"][js] = val_j
-        jours_travailles_semaine += val_j
-    save_db(base_donnees_projets)
-        
-    st.sidebar.info(f"⚡ مجموع أيام هذه الجمعة: **{int(jours_travailles_semaine)} أيام**")
-    st.sidebar.success(f"💰 **أجرة هذه الجمعة:** {jours_travailles_semaine * o['taux_jour']} دينار")
-
+    # حساب أيام الحضور وجمعها (عرض عدد الأيام فقط بدون كوشاج)
+    jours_semaine_compte = sum(float(v) for v in o.get("semaine", {}).values() if float(v) >= 0.5)
     date_cloture_str = o.get("date_cloture", p_data["date_debut"])
     date_cloture_obj = date.fromisoformat(date_cloture_str)
     jours_cal_depuis_cloture = calc_worker_days_period(p_data, ouvrier_choisi, date_cloture_obj, date.today())
-    total_jours_depuis_cloture = jours_travailles_semaine + jours_cal_depuis_cloture
+    total_jours_depuis_cloture = jours_semaine_compte + jours_cal_depuis_cloture
+    
+    st.sidebar.info(f"📊 **عدد أيام الحضور (منذ آخر خلاص):** {int(total_jours_depuis_cloture)} يوم")
     
     salaire_merite_periode = total_jours_depuis_cloture * o['taux_jour']
     solde = salaire_merite_periode - o['avances']
     
     st.sidebar.write(f"🗓️ **آخر خلاص:** {date_cloture_str}")
-    st.sidebar.write(f"📊 **الأيام من الخلاص:** {total_jours_depuis_cloture} يوم")
     st.sidebar.write(f"💰 **المستحق:** {salaire_merite_periode} د | **آفونس:** {o['avances']} د")
     if solde >= 0:
         st.sidebar.success(f"✅ الحساب خالص / الباقي: **{solde} د**")
@@ -254,9 +263,9 @@ with st.sidebar.expander("➕ إضافة عامل جديد"):
 # 3. تحليل Agent IA للأشغال والبنود في اليسار
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 تحليل Agent IA للأشغال والبنود")
-articles_disponibles = [a for a in p_data["articles"].keys() if match_smart(a, mot_cle_recherche)]
+articles_disponibles = [a for a in p_data["articles"].keys() if match_smart(a, query_actuelle)]
 options_art = [""] + articles_disponibles
-index_auto_art = 1 if (mot_cle_recherche.strip() and len(articles_disponibles) >= 1 and len(liste_ouv_filtree) == 0) else 0
+index_auto_art = 1 if (query_actuelle.strip() and len(articles_disponibles) >= 1 and len(liste_ouv_filtree) == 0) else 0
 article_selectionne = st.sidebar.selectbox("🔍 اختر البند (Article):", options_art, index=index_auto_art)
 
 if article_selectionne and article_selectionne != "":
@@ -393,7 +402,7 @@ with st.expander("📱 **مركز التحكم السريع (حضور الخدا
             p_data["plans_ia"].append({"nom": "بلان", "article": "عام", "synthese": "تحليل", "path": fn}); save_db(base_donnees_projets); st.success("تم الحفظ!")
 
 # ==========================================
-# الرزنامة التفاعلية (قلم التلوين السريع المباشر)
+# الرزنامة التفاعلية (قلم التلوين السريع)
 # ==========================================
 st.markdown("---")
 st.markdown("### 📅 رزنامة المتابعة والتلوين السريع (اختر الحالة وانقر على اليوم مباشرة)")
