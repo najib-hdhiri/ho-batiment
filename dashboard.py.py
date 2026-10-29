@@ -93,7 +93,6 @@ if "db" not in st.session_state:
 
 base_donnees_projets = st.session_state.db
 
-# دوال حساب الأيام منذ آخر خلاص (تاريخ غلق الحساب)
 def calc_worker_days_since_cloture(p_data, nom_ouv):
     o_info = p_data["ouvriers"][nom_ouv]
     d_cloture_str = o_info.get("dernier_cloture", p_data["date_debut"])
@@ -110,7 +109,7 @@ def calc_worker_days_since_cloture(p_data, nom_ouv):
     return total_d
 
 # ==========================================
-# القائمة الجانبية: بحث ذكي باللغتين (Smart Search عربي/فرنسي)
+# القائمة الجانبية: بحث ذكي باللغتين
 # ==========================================
 st.sidebar.markdown('<div class="brand-container">', unsafe_allow_html=True)
 st.sidebar.markdown("<h1 style='text-align: center; margin:0;'>🏗️</h1><p class='brand-title'>H.O Bâtiment</p><p class='brand-subtitle'>Agent IA — Central Hub</p></div>", unsafe_allow_html=True)
@@ -130,7 +129,6 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔍 بحث ذكي (Smart Search)")
 mot_cle = st.sidebar.text_input("🔎 ابحث باسم عامل أو بند (Bechir, بشير, Bordure):", placeholder="اكتب بالعربي أو الفرنسية...")
 
-# تصفية العمال بالاسم أو الحروف الفرنسية والعربية
 def match_search(text, query):
     if not query.strip(): return True
     q = query.strip().lower()
@@ -150,7 +148,6 @@ if ouvrier_choisi and ouvrier_choisi != "":
     st.sidebar.markdown(f"#### 👷‍♂️ {ouvrier_choisi}")
     st.sidebar.write(f"💵 الأجر اليومي: **{o['taux_jour']} د** | الحالة: **{statut_ouv}**")
     
-    # حساب الأيام والمالية منذ آخر خلاص
     jours_semaine_courante = sum(float(v) for v in o.get("semaine", {}).values())
     jours_depuis_cloture = calc_worker_days_since_cloture(p_data, ouvrier_choisi)
     total_jours_actifs = jours_depuis_cloture + jours_semaine_courante
@@ -195,7 +192,7 @@ with st.sidebar.expander("➕ إضافة عامل جديد"):
         st.rerun()
 
 # ==========================================
-# الواجهة الرئيسية (مع التقارير والجداول المزينة والمنظمة)
+# الواجهة الرئيسية
 # ==========================================
 st.title(f"🤖 H.O Bâtiment — {projet_choisi}")
 
@@ -207,7 +204,6 @@ tab_dash, tab_ouv_w, tab_art_w, tab_rep, tab_tools = st.tabs([
     "⚙️ أدوات الشانطي والصور"
 ])
 
-# 1. لوحة القيادة
 with tab_dash:
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("🟢 أيام العمل", f"{p_data['stats']['vert']} يوم")
@@ -221,7 +217,6 @@ with tab_dash:
         st.write(f"**{a_n}** — ({a_v['fait_total']} / {a_v['objectif']} {a_v['unite']}) — **{pct}%**")
         st.progress(pct)
 
-# 2. ورقة الحضور السريعة (تستثني المعلقين تماماً)
 with tab_ouv_w:
     st.markdown("##### ✅ **ورقة الحضور السريعة (من الإثنين إلى الأحد):**")
     changement_presence = False
@@ -244,7 +239,6 @@ with tab_ouv_w:
         save_db(base_donnees_projets)
         st.toast("✅ تم تحديث الحضور!")
 
-# 3. متابعة الأشغال
 with tab_art_w:
     st.markdown("##### 🧱 **تسجيل وإدارة كميات البنود:**")
     art_sel = st.selectbox("اختر البند:", articles_filtres if articles_filtres else list(p_data["articles"].keys()))
@@ -254,7 +248,6 @@ with tab_art_w:
         save_db(base_donnees_projets)
         st.success("تمت إضافة الكمية بنجاح!")
 
-# 4. التقارير المزينة والموحدة (الجدول الموحد للمالية والأسعار والنسب)
 with tab_rep:
     st.markdown("<div class='report-card'><h3>📋 التقارير التنفيذية والجدول الموحد للمالية والأشغال</h3><p>مقارنة شاملة بين الأهداف، المنجز، والنسب المئوية مع الوضع المالي للعمال.</p></div>", unsafe_allow_html=True)
     
@@ -274,7 +267,7 @@ with tab_rep:
     st.markdown("#### 💰 الجدول المالي الموحد للعمال")
     data_table_ouv = []
     for o_k, o_v in p_data["ouvriers"].items():
-        j_ pers = calc_worker_days_since_cloture(p_data, o_k)
+        j_pers = calc_worker_days_since_cloture(p_data, o_k)
         tot_d = j_pers + sum(float(v) for v in o_v.get("semaine", {}).values())
         tot_s = tot_d * o_v['taux_jour']
         data_table_ouv.append({
@@ -287,12 +280,10 @@ with tab_rep:
         })
     st.dataframe(pd.DataFrame(data_table_ouv), use_container_width=True)
     
-    # أزرار المشاركة السريعة
     txt_rep_gen = f"🏗️ *تقرير H.O Bâtiment - مشروع خليج الشعرة*\n📊 تم تحديث نسب الإنجاز والمالية بنجاح."
     enc_m = urllib.parse.quote(txt_rep_gen)
     st.markdown(f'<a href="https://wa.me/?text={enc_m}" target="_blank" class="share-btn wa-btn">🟢 إرسال التقرير عبر WhatsApp</a>', unsafe_allow_html=True)
 
-# 5. أدوات وصور الشانطي والرزنامة
 with tab_tools:
     st.markdown("##### 📸 صور الشانطي والرزنامة للتاريخ:")
     d_ch = st.date_input("تاريخ اليوم:", value=date.today())
@@ -308,11 +299,4 @@ annee = date_debut.year
 for m_num in range(date_debut.month, 13):
     st.markdown(f"**شهر {mois_arabes[m_num-1]} {annee}**")
     cols_sem = st.columns(7)
-    for k, j_n in enumerate(jours_semaine_noms): cols_sem[k].markdown(f"<div style='text-align:center; font-size:12px; font-weight:bold;'>{j_n[:4]}</div>", unsafe_allow_html=True)
-    for semaine in calendar.monthcalendar(annee, m_num):
-        cols = st.columns(7)
-        for k, j_num in enumerate(semaine):
-            if j_num == 0: cols[k].write("")
-            else:
-                d_str = f"{annee}-{m_num:02d}-{j_num:02d}"
-                cols[k].button(f"🟢 {j_num}" if d_str in donnees_chantier else f"⬜ {j_num}", key=f"b_{d_str}", on_click=set_jour, args=(d_str,), use_container_width=True)
+    for k, j_n in enumerate(jours_semaine_noms): cols_sem[k].markdown(f"<div style='
