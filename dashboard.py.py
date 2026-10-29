@@ -299,4 +299,12 @@ annee = date_debut.year
 for m_num in range(date_debut.month, 13):
     st.markdown(f"**شهر {mois_arabes[m_num-1]} {annee}**")
     cols_sem = st.columns(7)
-    for k, j_n in enumerate(jours_semaine_noms): cols_sem[k].markdown(f"<div style='
+    for k, j_n in enumerate(jours_semaine_noms): 
+        cols_sem[k].markdown("<div style='text-align:center; font-size:12px; font-weight:bold;'>" + j_n[:4] + "</div>", unsafe_allow_html=True)
+    for semaine in calendar.monthcalendar(annee, m_num):
+        cols = st.columns(7)
+        for k, j_num in enumerate(semaine):
+            if j_num == 0: cols[k].write("")
+            else:
+                d_str = f"{annee}-{m_num:02d}-{j_num:02d}"
+                cols[k].button(f"🟢 {j_num}" if d_str in donnees_chantier else f"⬜ {j_num}", key=f"b_{d_str}", on_click=set_jour, args=(d_str,), use_container_width=True)
