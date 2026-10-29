@@ -16,7 +16,6 @@ st.markdown("""
     .brand-subtitle { color: gray; font-size: 12px; margin-top: 2px; margin-bottom: 0; }
     input[type="checkbox"] { transform: scale(1.3); accent-color: #28a745 !important; cursor: pointer; }
     .worker-row { background-color: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #28a745; }
-    .download-btn { display: inline-block; padding: 10px 15px; border-radius: 8px; color: white !important; background-color: #2e7d32; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 8px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -274,11 +273,10 @@ if article_selectionne and article_selectionne != "":
     reste = max(tache_trouvee['objectif'] - tache_trouvee['fait_total'], 0.0)
     st.sidebar.write(f"⏳ **المتبقي بالعقد:** {reste} {unite_a}")
 
-# 4. التنزيل على شكل Excel (التقارير اليومية والشهرية)
+# 4. التنزيل بصيغة Excel (مع ترميز صحيح utf-8-sig للعربية والفرنسية)
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📥 التنزيل بصيغة Excel (Google Drive)")
 
-# إعداد ملف Excel للعمال والمالية
 data_ouv_export = []
 for k_o, v_o in p_data["ouvriers"].items():
     js = sum(float(x) for x in v_o.get("semaine", {}).values())
@@ -297,14 +295,13 @@ df_export_ouv = pd.DataFrame(data_ouv_export)
 csv_ouv_data = df_export_ouv.to_csv(index=False, encoding="utf-8-sig")
 
 st.sidebar.download_button(
-    label="📥 تنزيل تقرير أجور العمال (Excel/CSV)",
+    label="📥 تنزيل تقرير أجور العمال (Excel)",
     data=csv_ouv_data,
     file_name=f"Rapport_Ouvriers_{date.today().isoformat()}.csv",
     mime="text/csv",
     use_container_width=True
 )
 
-# إعداد ملف Excel لتقدم الأشغال (التقرير الشهري والمتابعة)
 data_art_export = []
 for k_a, v_a in p_data["articles"].items():
     obj = v_a["objectif"]
@@ -320,7 +317,7 @@ df_export_art = pd.DataFrame(data_art_export)
 csv_art_data = df_export_art.to_csv(index=False, encoding="utf-8-sig")
 
 st.sidebar.download_button(
-    label="📥 تنزيل تقرير الأشغال والتقدم (Excel/CSV)",
+    label="📥 تنزيل تقرير الأشغال والتقدم (Excel)",
     data=csv_art_data,
     file_name=f"Rapport_Articles_{date.today().isoformat()}.csv",
     mime="text/csv",
