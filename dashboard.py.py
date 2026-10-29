@@ -6,14 +6,10 @@ import json
 import urllib.parse
 import pandas as pd
 
-# ضبط الرزنامة لتبدأ دائماً بيوم الإثنين لتتطابق 100% مع ورقة الحضور السريعة
 calendar.setfirstweekday(calendar.MONDAY)
 
 st.set_page_config(page_title="H.O Bâtiment - Système Central IA", page_icon="🏗️", layout="wide")
 
-# ==========================================
-# تصميم CSS
-# ==========================================
 st.markdown("""
     <style>
     .brand-container { text-align: center; background-color: #ffffff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
@@ -24,11 +20,6 @@ st.markdown("""
     .share-btn { display: inline-block; padding: 10px 15px; border-radius: 8px; color: white !important; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 8px; }
     .wa-btn { background-color: #25D366; }
     .mail-btn { background-color: #1976D2; }
-    .styled-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; text-align: right; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .styled-table thead tr { background-color: #ff4b4b; color: #ffffff; text-align: right; font-weight: bold; }
-    .styled-table th, .styled-table td { padding: 10px 12px; border-bottom: 1px solid #dddddd; }
-    .styled-table tbody tr:nth-of-type(even) { background-color: #f8f9fa; }
-    .styled-table tbody tr.total-row { background-color: #e8f5e9; font-weight: bold; color: #1b5e20; border-top: 2px solid #28a745; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -39,66 +30,9 @@ DATA_FILE = "uploads/chantier_data.json"
 jours_semaine_noms = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
 mois_arabes = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
 
-ALIASES_RECHERCHE = {
-    "بشير بن حميد": "bechir bachir bchir ben hmid بشير بن حميد",
-    "صالح بن عمار": "saleh salah salh ben ammar صالح بن عمار",
-    "الهادي العياري": "hedi hadi elhedi ayari الهادي العياري",
-    "جمعة المجبري": "jomaa jemaa jom3a mejbri جمعة المجبري",
-    "علي الطرابلسي": "ali trabelsi علي الطرابلسي",
-    "Bordure T2": "bordure t2 بوردور",
-    "Bordure Mince P2": "bordure mince p2 بوردور جويد",
-    "Caniveau CS2": "caniveau cs2 كنفو كانيفو",
-    "Caniveau CC2": "caniveau cc2 كنفو كانيفو",
-    "Pavé autobloquant": "pave autobloquant بافي رصيف",
-    "A.01 Double Cloison 0.35m": "double cloison 0.35 35 دبل كلوازون حائط",
-    "A.02 Double Cloison 0.30m": "double cloison 0.30 30 دبل كلوازون",
-    "A.03 Cloison 0.25m": "cloison 0.25 25 كلوازون",
-    "A.04 Cloison 0.20m": "cloison 0.20 20 كلوازون",
-    "A.05 Cloison 0.15m": "cloison 0.15 15 كلوازون",
-    "A.06 Cloison 0.10m": "cloison 0.10 10 كلوازون",
-    "B-1 Enduit extérieur": "enduit exterieur ب1 لياسة خارجية دريساج",
-    "B-2 Enduit intérieur": "enduit interieur ب2 لياسة داخلية",
-    "B-3 Enduit sous plafond": "enduit sous plafond ب3 سقف",
-    "B-4 Enduit grillagé": "enduit grillage ب4 قرياج",
-    "B-5 Enduit de ravoirage": "enduit ravoirage ب5 رافواراج",
-    "C-1 Carrelage marbré 25x25": "carrelage marbre 25 جليز كرلاج",
-    "C-2 Carrelage carreaux": "carrelage carreaux جليز",
-    "C-3 Revêtement carreaux": "revetement carreaux فايونس",
-    "C-4 Plinthe": "plinthe بلينت",
-    "C-5 Revêtement extérieur": "revetement exterieur تغليف خارجي",
-    "C-6 Seuils en marbre Thala": "seuils marbre thala رخام تالة عتبة",
-    "C-7 Siffle en marbre Thala": "siffle marbre thala سيفل رخام تالة"
-}
-
-def match_smart(nom_item, query):
-    if not query or not query.strip(): return True
-    q = query.strip().lower()
-    return q in (nom_item + " " + ALIASES_RECHERCHE.get(nom_item, "")).lower()
-
 ALL_ARTICLES_DEFAULT = {
     "Bordure T2": {"objectif": 7700.0, "fait_total": 1540.0, "fait_semaine": 120.0, "unite": "ml"},
-    "Bordure Mince P2": {"objectif": 7250.0, "fait_total": 1450.0, "fait_semaine": 80.0, "unite": "ml"},
-    "Caniveau CS2": {"objectif": 7700.0, "fait_total": 1155.0, "fait_semaine": 40.0, "unite": "ml"},
-    "Caniveau CC2": {"objectif": 500.0, "fait_total": 150.0, "fait_semaine": 30.0, "unite": "ml"},
-    "Pavé autobloquant": {"objectif": 15500.0, "fait_total": 3100.0, "fait_semaine": 50.0, "unite": "م²"},
-    "A.01 Double Cloison 0.35m": {"objectif": 1450.0, "fait_total": 435.0, "fait_semaine": 50.0, "unite": "م²"},
-    "A.02 Double Cloison 0.30m": {"objectif": 110.0, "fait_total": 33.0, "fait_semaine": 15.0, "unite": "م²"},
-    "A.03 Cloison 0.25m": {"objectif": 1150.0, "fait_total": 345.0, "fait_semaine": 40.0, "unite": "م²"},
-    "A.04 Cloison 0.20m": {"objectif": 5.0, "fait_total": 1.5, "fait_semaine": 1.0, "unite": "م²"},
-    "A.05 Cloison 0.15m": {"objectif": 180.0, "fait_total": 54.0, "fait_semaine": 10.0, "unite": "م²"},
-    "A.06 Cloison 0.10m": {"objectif": 400.0, "fait_total": 120.0, "fait_semaine": 20.0, "unite": "م²"},
-    "B-1 Enduit extérieur": {"objectif": 4700.0, "fait_total": 1410.0, "fait_semaine": 80.0, "unite": "م²"},
-    "B-2 Enduit intérieur": {"objectif": 2050.0, "fait_total": 615.0, "fait_semaine": 70.0, "unite": "م²"},
-    "B-3 Enduit sous plafond": {"objectif": 1900.0, "fait_total": 570.0, "fait_semaine": 50.0, "unite": "م²"},
-    "B-4 Enduit grillagé": {"objectif": 350.0, "fait_total": 105.0, "fait_semaine": 10.0, "unite": "م²"},
-    "B-5 Enduit de ravoirage": {"objectif": 850.0, "fait_total": 255.0, "fait_semaine": 30.0, "unite": "م²"},
-    "C-1 Carrelage marbré 25x25": {"objectif": 1150.0, "fait_total": 345.0, "fait_semaine": 60.0, "unite": "م²"},
-    "C-2 Carrelage carreaux": {"objectif": 2400.0, "fait_total": 720.0, "fait_semaine": 100.0, "unite": "م²"},
-    "C-3 Revêtement carreaux": {"objectif": 190.0, "fait_total": 57.0, "fait_semaine": 10.0, "unite": "م²"},
-    "C-4 Plinthe": {"objectif": 1000.0, "fait_total": 300.0, "fait_semaine": 40.0, "unite": "ml"},
-    "C-5 Revêtement extérieur": {"objectif": 15.0, "fait_total": 4.5, "fait_semaine": 2.0, "unite": "م²"},
-    "C-6 Seuils en marbre Thala": {"objectif": 15.0, "fait_total": 4.5, "fait_semaine": 1.0, "unite": "م²"},
-    "C-7 Siffle en marbre Thala": {"objectif": 50.0, "fait_total": 15.0, "fait_semaine": 5.0, "unite": "ml"}
+    "Pavé autobloquant": {"objectif": 15500.0, "fait_total": 3100.0, "fait_semaine": 50.0, "unite": "م²"}
 }
 
 ALL_OUVRIERS_DEFAULT = {
@@ -113,10 +47,8 @@ default_db = {
     "خليج الشعرة (Khalij Chaara)": {
         "date_debut": "2026-05-18",
         "stats": {"vert": 65, "jaune": 44, "gris": 12, "meteo": 8, "conge": 5},
-        "jours": {},
-        "photos_chantier": [], "models_3d": [], "plans_ia": [],
-        "ouvriers": ALL_OUVRIERS_DEFAULT,
-        "articles": ALL_ARTICLES_DEFAULT
+        "jours": {}, "photos_chantier": [], "models_3d": [], "plans_ia": [],
+        "ouvriers": ALL_OUVRIERS_DEFAULT, "articles": ALL_ARTICLES_DEFAULT
     }
 }
 
@@ -129,13 +61,7 @@ def load_db():
                 if proj_key not in data: data = default_db
                 else: data = {proj_key: data[proj_key]}
                 p = data[proj_key]
-                p.setdefault("photos_chantier", [])
-                p.setdefault("models_3d", [])
-                p.setdefault("plans_ia", [])
-                p.setdefault("articles", {})
                 p.setdefault("ouvriers", {})
-                for k_art, v_art in ALL_ARTICLES_DEFAULT.items():
-                    if k_art not in p["articles"]: p["articles"][k_art] = v_art
                 for k_ouv, v_ouv in ALL_OUVRIERS_DEFAULT.items():
                     if k_ouv not in p["ouvriers"]: p["ouvriers"][k_ouv] = v_ouv
                 for o_k, o_v in p["ouvriers"].items():
@@ -143,13 +69,11 @@ def load_db():
                     o_v.setdefault("date_cloture", p["date_debut"])
                     o_v.setdefault("semaine", {j: 0.0 for j in jours_semaine_noms})
                 return data
-        except Exception:
-            pass
+        except Exception: pass
     return default_db
 
 def save_db(db_data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(db_data, f, ensure_ascii=False, indent=2)
+    with open(DATA_FILE, "w", encoding="utf-8") as f: json.dump(db_data, f, ensure_ascii=False, indent=2)
 
 if "db" not in st.session_state:
     st.session_state.db = load_db()
@@ -161,6 +85,12 @@ p_data = base_donnees_projets[projet_choisi]
 donnees_chantier = p_data["jours"]
 date_debut = date.fromisoformat(p_data["date_debut"])
 
+if 'jour_clique' not in st.session_state: st.session_state.jour_clique = None
+if 'ouvrier_actif' not in st.session_state: st.session_state.ouvrier_actif = None
+if 'mode_edition_presence' not in st.session_state: st.session_state.mode_edition_presence = False
+
+def set_jour(jour): st.session_state.jour_clique = jour
+
 def calc_worker_days_period(p_data, nom_ouv, start_d=None, end_d=None):
     total_d = 0.0
     for d_str, j_info in p_data["jours"].items():
@@ -169,208 +99,104 @@ def calc_worker_days_period(p_data, nom_ouv, start_d=None, end_d=None):
             if start_d and d_obj < start_d: continue
             if end_d and d_obj > end_d: continue
             total_d += float(j_info.get("presences", {}).get(nom_ouv, 0.0))
-        except Exception:
-            pass
+        except Exception: pass
     return total_d
 
-def calc_article_qty_period(p_data, nom_art, start_d=None, end_d=None):
-    total_q = 0.0
-    for d_str, j_info in p_data["jours"].items():
-        try:
-            d_obj = date.fromisoformat(d_str)
-            if start_d and d_obj < start_d: continue
-            if end_d and d_obj > end_d: continue
-            total_q += float(j_info.get("avancement", {}).get(nom_art, 0.0))
-        except Exception:
-            pass
-    return total_q
-
 # ==========================================
-# إدارة اللوغو والقائمة الجانبية (الجهة اليسرى كما كانت تماماً)
+# القائمة الجانبية (Sidebar)
 # ==========================================
 logo_path = None
 for p in ["uploads/logo_saved.jpg", "logo.jpg", "logo.png"]:
     if os.path.exists(p): logo_path = p; break
 
 st.sidebar.markdown('<div class="brand-container">', unsafe_allow_html=True)
-if logo_path:
-    col_l1, col_l2, col_l3 = st.sidebar.columns([1, 2, 1])
-    with col_l2:
-        st.sidebar.image(logo_path, width=110)
-else:
-    st.sidebar.markdown("<h1 style='text-align: center; margin:0;'>🏗️</h1>", unsafe_allow_html=True)
-
-st.sidebar.markdown("<p class='brand-title'>H.O Bâtiment</p>", unsafe_allow_html=True)
-st.sidebar.markdown("<p class='brand-subtitle'>Agent IA — Central Hub</p>", unsafe_allow_html=True)
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
-
-if not logo_path:
-    up_logo = st.sidebar.file_uploader("🖼️ أضف شعار الشركة (Logo):", type=["jpg", "png", "jpeg"], key="up_logo_ho")
-    if up_logo is not None:
-        with open("uploads/logo_saved.jpg", "wb") as f:
-            f.write(up_logo.getbuffer())
-        st.rerun()
-
-st.sidebar.markdown("---")
+if logo_path: st.sidebar.image(logo_path, width=110)
+else: st.sidebar.markdown("<h1 style='text-align: center; margin:0;'>🏗️</h1>", unsafe_allow_html=True)
+st.sidebar.markdown("<p class='brand-title'>H.O Bâtiment</p><p class='brand-subtitle'>Agent IA — Central Hub</p></div>", unsafe_allow_html=True)
 st.sidebar.info(f"📂 **المشروع:** {projet_choisi}")
 
-# 1. البحث المتقدم
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔍 بحث متقدم (Recherche IA)")
-mot_cle_recherche = st.sidebar.text_input("🔎 ابحث عن اسم خدام أو بند:", placeholder="bechir, بشير, bordure...")
+st.sidebar.markdown("### 👷 ملفات الخدامة (انقر للاستعراض)")
+for nom_o, info_o in p_data["ouvriers"].items():
+    statut_o = info_o.get("statut", "نشط")
+    icon_s = "🟢" if statut_o == "نشط" else "🟠"
+    if st.sidebar.button(f"{icon_s} {nom_o}", key=f"btn_ouv_side_{nom_o}", use_container_width=True):
+        st.session_state.ouvrier_actif = nom_o
 
-filtre_temps = st.sidebar.selectbox("📅 فترة المتابعة:", ["من تاريخ وقف الحساب (الخلاص)", "بالجمعة (الأسبوع الحالي)", "بالشهر", "بين تاريخين"])
-d_debut_f, d_fin_f = None, None
-if filtre_temps == "بالجمعة (الأسبوع الحالي)":
-    auj = date.today()
-    d_debut_f = auj - timedelta(days=auj.weekday())
-    d_fin_f = d_debut_f + timedelta(days=6)
-elif filtre_temps == "بالشهر":
-    m_sel = st.sidebar.selectbox("الشهر:", mois_arabes, index=date.today().month - 1)
-    m_num = mois_arabes.index(m_sel) + 1
-    _, fin_m = calendar.monthrange(date_debut.year, m_num)
-    d_debut_f = date(date_debut.year, m_num, 1); d_fin_f = date(date_debut.year, m_num, fin_m)
-elif filtre_temps == "بين تاريخين":
-    c1, c2 = st.sidebar.columns(2)
-    d_debut_f = c1.date_input("من:", value=date_debut)
-    d_fin_f = c2.date_input("إلى:", value=date.today())
-
-# 2. ملفات الخدامة وحسابات Agent IA في اليسار
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 👷 ملفات الخدامة وحسابات Agent IA")
-liste_ouv_filtree = [k for k in p_data["ouvriers"].keys() if match_smart(k, mot_cle_recherche)]
-options_ouv = [""] + liste_ouv_filtree
-index_auto_ouv = 1 if (mot_cle_recherche.strip() and len(liste_ouv_filtree) >= 1) else 0
-ouvrier_choisi = st.sidebar.selectbox("اختر الخدام للمعاينة:", options_ouv, index=index_auto_ouv)
-
-if ouvrier_choisi and ouvrier_choisi != "":
+ouvrier_choisi = st.session_state.ouvrier_actif
+if ouvrier_choisi and ouvrier_choisi in p_data["ouvriers"]:
     o = p_data["ouvriers"][ouvrier_choisi]
     statut_ouv = o.get("statut", "نشط")
-    etat_badge = "🟢 نشط" if statut_ouv == "نشط" else ("🟠 معلق وقتياً" if statut_ouv == "معلق" else "🔴 مقفول")
+    st.sidebar.markdown(f"---")
+    st.sidebar.markdown(f"<h3 style='text-align: center; color: #ff4b4b;'>👷‍♂️ {ouvrier_choisi}</h3>", unsafe_allow_html=True)
+    st.sidebar.write(f"🛠️ **الاختصاص:** {o['specialite']} | 💵 **النهار:** {o['taux_jour']} د")
     
-    st.sidebar.markdown(f"<h3 style='text-align: center;'>👷‍♂️ {ouvrier_choisi}</h3>", unsafe_allow_html=True)
-    st.sidebar.markdown(f"<p style='text-align: center; color: #ff4b4b; font-weight: bold;'>🤖 {o['specialite']} | {etat_badge}</p>", unsafe_allow_html=True)
+    j_sem = sum(float(v) for v in o.get("semaine", {}).values())
+    d_cloture = date.fromisoformat(o.get("date_cloture", p_data["date_debut"]))
+    j_depuis = calc_worker_days_period(p_data, ouvrier_choisi, d_cloture, date.today())
+    total_j = j_sem + j_depuis
     
-    safe_name = ouvrier_choisi.replace(" ", "_")
-    img_path = f"uploads/{safe_name}_photo.jpg"
-    if os.path.exists(img_path):
-        st.sidebar.image(img_path, width=140)
-    else:
-        img_ouvrier = st.sidebar.file_uploader(f"🖼️ صورة {ouvrier_choisi}:", type=["jpg", "png", "jpeg"], key=f"img_{ouvrier_choisi}")
-        if img_ouvrier is not None:
-            with open(img_path, "wb") as f: f.write(img_ouvrier.getbuffer())
-            st.rerun()
+    salaire_merite = total_j * o['taux_jour']
+    solde = salaire_merite - o['avances']
+    
+    st.sidebar.info(f"📊 أيام العمل: **{total_j} يوم**\n💰 المستحق: **{salaire_merite} د** | آفونس: **{o['avances']} د**")
+    if solde >= 0: st.sidebar.success(f"✅ الباقي للخلاص: **{solde} د**")
+    else: st.sidebar.error(f"🔵 تسبقة زايدة: **{solde} د**")
 
-    st.sidebar.markdown("---")
-    st.sidebar.write(f"📞 **الهاتف:** {o['tel']}")
-    st.sidebar.write(f"💵 **خلاص نهاره:** {o['taux_jour']} دينار")
-    
-    st.sidebar.markdown("📅 **أيام الحضور (كوشاج سريع ✅):**")
-    jours_travailles_semaine = 0.0
-    for js in jours_semaine_noms:
-        present_side = float(o.get("semaine", {}).get(js, 1.0)) >= 0.5
-        coche_side = st.sidebar.checkbox(f"{js}", value=present_side, key=f"side_chk_{projet_choisi}_{ouvrier_choisi}_{js}", disabled=(statut_ouv != "نشط"))
-        val_j = 1.0 if coche_side else 0.0
-        o["semaine"][js] = val_j
-        jours_travailles_semaine += val_j
-    save_db(base_donnees_projets)
-        
-    st.sidebar.info(f"⚡ مجموع أيام هذه الجمعة: **{int(jours_travailles_semaine)} أيام**")
-    st.sidebar.success(f"💰 **أجرة هذه الجمعة:** {jours_travailles_semaine * o['taux_jour']} دينار")
-
-    date_cloture_str = o.get("date_cloture", p_data["date_debut"])
-    date_cloture_obj = date.fromisoformat(date_cloture_str)
-    jours_cal_depuis_cloture = calc_worker_days_period(p_data, ouvrier_choisi, date_cloture_obj, date.today())
-    total_jours_depuis_cloture = jours_travailles_semaine + jours_cal_depuis_cloture
-    
-    salaire_merite_periode = total_jours_depuis_cloture * o['taux_jour']
-    solde = salaire_merite_periode - o['avances']
-    
-    st.sidebar.write(f"🗓️ **آخر خلاص:** {date_cloture_str}")
-    st.sidebar.write(f"📊 **الأيام من الخلاص:** {total_jours_depuis_cloture} يوم")
-    st.sidebar.write(f"💰 **المستحق:** {salaire_merite_periode} د | **آفونس:** {o['avances']} د")
-    if solde >= 0:
-        st.sidebar.success(f"✅ الحساب خالص / الباقي: **{solde} د**")
-    else:
-        st.sidebar.error(f"🔵 الخدام خالص، وتسالو تسبقة زايدة: **{solde} د** (بالسالب)")
-
-    st.sidebar.markdown("⚙️ **إدارة عمل الخدام:**")
-    col_act1, col_act2 = st.sidebar.columns(2)
-    with col_act1:
-        if statut_ouv != "معلق":
-            if st.button("⏸️ تعليق العمل", key=f"susp_{ouvrier_choisi}", use_container_width=True):
-                o["statut"] = "معلق"; save_db(base_donnees_projets); st.rerun()
-        else:
-            if st.button("▶️ تفعيل", key=f"act_{ouvrier_choisi}", use_container_width=True):
-                o["statut"] = "نشط"; save_db(base_donnees_projets); st.rerun()
-    with col_act2:
-        if st.button("🔒 خلاص ووقف الحساب", key=f"close_{ouvrier_choisi}", use_container_width=True):
+    c_a1, c_a2 = st.sidebar.columns(2)
+    with c_a1:
+        if statut_ouv != "معلق" and st.button("⏸️ تعليق", key="s_susp", use_container_width=True):
+            o["statut"] = "معلق"; save_db(base_donnees_projets); st.rerun()
+        elif statut_ouv == "معلق" and st.button("▶️ تفعيل", key="s_act", use_container_width=True):
+            o["statut"] = "نشط"; save_db(base_donnees_projets); st.rerun()
+    with c_a2:
+        if st.button("🔒 خلاص الحساب", key="s_close", use_container_width=True):
             if solde > 0: o["paye_total"] = o.get("paye_total", 0.0) + solde + o["avances"]
             o["avances"] = 0.0; o["semaine"] = {j: 0.0 for j in jours_semaine_noms}; o["date_cloture"] = date.today().isoformat()
-            save_db(base_donnees_projets); st.sidebar.success("تم غلق الحساب وتصفير الفترة!"); st.rerun()
+            save_db(base_donnees_projets); st.sidebar.success("تم غلق الحساب!"); st.rerun()
 
+st.sidebar.markdown("---")
 with st.sidebar.expander("➕ إضافة عامل جديد"):
-    nom_nv = st.text_input("اسم ولقب الخدام:", key="nv_nom")
+    nom_nv = st.text_input("اسم الخدام:", key="nv_nom")
     spec_nv = st.text_input("الاختصاص:", key="nv_spec")
-    tel_nv = st.text_input("رقم الهاتف:", key="nv_tel")
     taux_nv = st.number_input("خلاص النهار (د):", min_value=10.0, value=50.0, step=5.0, key="nv_taux")
-    statut_nv = st.selectbox("الوضعية الابتدائية:", ["نشط", "معلق"], key="nv_statut")
-    if st.button("✅ حفظ العامل الجديد", use_container_width=True) and nom_nv.strip():
-        p_data["ouvriers"][nom_nv.strip()] = {
-            "specialite": spec_nv or "عامل", "tel": tel_nv or "-", "taux_jour": taux_nv, "statut": statut_nv,
-            "date_cloture": date.today().isoformat(), "paye_total": 0.0, "avances": 0.0, "semaine": {j: 0.0 for j in jours_semaine_noms}
-        }
+    if st.button("✅ حفظ", use_container_width=True) and nom_nv.strip():
+        p_data["ouvriers"][nom_nv.strip()] = {"specialite": spec_nv or "عامل", "tel": "-", "taux_jour": taux_nv, "statut": "نشط", "date_cloture": date.today().isoformat(), "avances": 0.0, "semaine": {j: 0.0 for j in jours_semaine_noms}}
         save_db(base_donnees_projets); st.rerun()
-
-# 3. تحليل Agent IA للأشغال والبنود في اليسار
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📊 تحليل Agent IA للأشغال والبنود")
-articles_disponibles = [a for a in p_data["articles"].keys() if match_smart(a, mot_cle_recherche)]
-options_art = [""] + articles_disponibles
-index_auto_art = 1 if (mot_cle_recherche.strip() and len(articles_disponibles) >= 1 and len(liste_ouv_filtree) == 0) else 0
-article_selectionne = st.sidebar.selectbox("🔍 اختر البند (Article):", options_art, index=index_auto_art)
-
-if article_selectionne and article_selectionne != "":
-    tache_trouvee = p_data["articles"][article_selectionne]
-    unite_a = tache_trouvee['unite']
-    pourcentage = min(int((tache_trouvee['fait_total'] / tache_trouvee['objectif']) * 100), 100)
-    st.sidebar.write(f"📊 **نسبة الإنجاز ({article_selectionne}):** {pourcentage}%")
-    st.sidebar.progress(pourcentage)
-    st.sidebar.write(f"✅ **المنجز الجملي:** {tache_trouvee['fait_total']} / {tache_trouvee['objectif']} {unite_a}")
-    st.sidebar.write(f"⚡ **إنجاز الجمعة:** {tache_trouvee['fait_semaine']} {unite_a}")
-    reste = max(tache_trouvee['objectif'] - tache_trouvee['fait_total'], 0.0)
-    st.sidebar.write(f"⏳ **المتبقي بالعقد:** {reste} {unite_a}")
-
-# 4. إرسال التقارير عبر WhatsApp و Email في اليسار
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📩 التقارير اليومية (WhatsApp / Email)")
-date_rap = st.sidebar.date_input("تاريخ التقرير:", value=date.today(), key="side_rep_d")
-d_rap_str = date_rap.isoformat()
-j_rap_info = donnees_chantier.get(d_rap_str, {})
-etat_rap_map = {"vert": "يوم عمل عادي 🟢", "jaune": "إيقاف أشغال 🟡", "meteo": "سوء أحوال جوية 🌧️", "conge": "راحة 🔵"}
-etat_rap_txt = etat_rap_map.get(j_rap_info.get("etat", "vert"), "عمل 🟢")
-note_rap_txt = j_rap_info.get("details", {}).get("travail") or j_rap_info.get("details", {}).get("probleme", "اعتيادي")
-ouv_actifs_sem = [k for k, v in p_data["ouvriers"].items() if v.get("statut", "نشط") == "نشط"]
-
-texte_rapport_auto = f"🏗️ *تقرير شانطي H.O Bâtiment*\n📅 التاريخ: {d_rap_str}\n📌 الحالة: {etat_rap_txt}\n📝 التفاصيل: {note_rap_txt}\n👷 العمال النشطون: {len(ouv_actifs_sem)}\n"
-enc_msg = urllib.parse.quote(texte_rapport_auto)
-enc_sub = urllib.parse.quote(f"تقرير شانطي - {d_rap_str}")
-st.sidebar.markdown(f'<a href="https://wa.me/?text={enc_msg}" target="_blank" class="share-btn wa-btn">🟢 إرسال عبر WhatsApp</a>', unsafe_allow_html=True)
-st.sidebar.markdown(f'<a href="mailto:?subject={enc_sub}&body={enc_msg}" target="_blank" class="share-btn mail-btn">📧 إرسال عبر Email</a>', unsafe_allow_html=True)
-
 
 # ==========================================
 # الواجهة الرئيسية
 # ==========================================
 st.title(f"🤖 H.O Bâtiment — {projet_choisi}")
 
-with st.expander("📱 **مركز التحكم السريع (خدامة، أشغال، يوميات، صور متعددة، 3D، وبلانات)**", expanded=True):
+with st.expander("📱 **مركز التحكم السريع (حضور الخدامة، الأشغال، يوميات، صور متعددة، 3D، وبلانات)**", expanded=True):
     tab_ouv, tab_art, tab_jour, tab_photos, tab_3d, tab_plans = st.tabs([
         "👷 1. حضور الخدامة", "🧱 2. الأشغال", "📅 3. يوميات الشانطي", "📸 4. صور متعددة", "🏢 5. تصاور 3D", "📐 6. البلانات"
     ])
     
+    # 1. ورقة الحضور السريعة مع زر الفتح والتأكيد (Mode Validation) لمنع الخطأ
     with tab_ouv:
-        st.markdown("##### ✅ **ورقة الحضور السريعة (العمال المعلقون لا يظهرون هنا):**")
+        st.markdown("##### ✅ **ورقة الحضور السريعة للأسبوع (العمال المعلقون لا يظهرون هنا):**")
+        
+        col_v1, col_v2 = st.columns([2, 2])
+        with col_v1:
+            if not st.session_state.mode_edition_presence:
+                if st.button("🔓 فتح ورقة الحضور للتعديل", use_container_width=True):
+                    st.session_state.mode_edition_presence = True
+                    st.rerun()
+            else:
+                if st.button("💾 تأكيد وحفظ الحضور (Valider)", use_container_width=True):
+                    st.session_state.mode_edition_presence = False
+                    save_db(base_donnees_projets)
+                    st.success("✅ C'est bon Validé! تم الحفظ وقفل الورقة أماناً.")
+                    st.rerun()
+                    
+        with col_v2:
+            if st.session_state.mode_edition_presence:
+                st.markdown("<p style='color: orange; font-weight: bold;'>⚠️ الورقة مفتوحة للتعديل حالياً</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p style='color: green; font-weight: bold;'>🔒 الورقة مقفلة ومؤمنة (آمنة من الأخطاء)</p>", unsafe_allow_html=True)
+
         chg = False
         for nom_ouv, info_ouv in p_data["ouvriers"].items():
             if info_ouv.get("statut") != "نشط": continue
@@ -379,15 +205,17 @@ with st.expander("📱 **مركز التحكم السريع (خدامة، أشغ
             tot_s = 0.0
             for idx_j, js in enumerate(jours_semaine_noms):
                 pres = float(info_ouv.get("semaine", {}).get(js, 0.0)) >= 0.5
-                val = cols_c[idx_j].checkbox(f"{js}", value=pres, key=f"chk_mob_{nom_ouv}_{js}")
+                val = cols_c[idx_j].checkbox(f"{js}", value=pres, key=f"chk_mob_{nom_ouv}_{js}", disabled=(not st.session_state.mode_edition_presence))
                 v_num = 1.0 if val else 0.0
                 if info_ouv["semaine"].get(js, 0.0) != v_num:
                     info_ouv["semaine"][js] = v_num; chg = True
                 tot_s += v_num
             cols_c[7].markdown(f"**{int(tot_s)} أيام**<br><span style='color:#28a745; font-weight:bold;'>{int(tot_s * info_ouv['taux_jour'])} د</span>", unsafe_allow_html=True)
             st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
-        if chg: save_db(base_donnees_projets); st.toast("✅ تم الحفظ!")
+        if chg and st.session_state.mode_edition_presence:
+            save_db(base_donnees_projets)
 
+        st.markdown("##### 💰 **تسجيل آفونس (Avance) أو خلاص جديد:**")
         c_av1, c_av2, c_av3 = st.columns(3)
         with c_av1: ouv_m = st.selectbox("الخدام:", list(p_data["ouvriers"].keys()), key="mob_ouv")
         with c_av2: av_p = st.number_input("المبلغ (د):", min_value=0.0, step=10.0, key="mob_av")
@@ -442,7 +270,7 @@ with st.expander("📱 **مركز التحكم السريع (خدامة، أشغ
             p_data["plans_ia"].append({"nom": "بلان", "article": "عام", "synthese": "تحليل", "path": fn}); save_db(base_donnees_projets); st.success("تم الحفظ!")
 
 # ==========================================
-# الرزنامة التفاعلية (قلم التلوين السريع المباشر)
+# الرزنامة التفاعلية (قلم التلوين السريع)
 # ==========================================
 st.markdown("---")
 st.markdown("### 📅 رزنامة المتابعة والتلوين السريع (اختر الحالة وانقر على اليوم مباشرة)")
