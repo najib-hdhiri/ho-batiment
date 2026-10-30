@@ -16,6 +16,7 @@ st.markdown("""
     .brand-subtitle { color: gray; font-size: 12px; margin-top: 2px; margin-bottom: 0; }
     input[type="checkbox"] { transform: scale(1.3); accent-color: #28a745 !important; cursor: pointer; }
     .worker-row { background-color: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #28a745; }
+    .ai-box { background-color: #eef6ff; border-right: 4px solid #1976D2; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -116,6 +117,9 @@ def load_db():
                 p = data[proj_key]
                 p.setdefault("ouvriers", {})
                 p.setdefault("articles", {})
+                p.setdefault("photos_chantier", [])
+                p.setdefault("models_3d", [])
+                p.setdefault("plans_ia", [])
                 for k_art, v_art in ALL_ARTICLES_DEFAULT.items():
                     if k_art not in p["articles"]: p["articles"][k_art] = v_art
                 for k_ouv, v_ouv in ALL_OUVRIERS_DEFAULT.items():
@@ -146,8 +150,6 @@ if 'jour_clique' not in st.session_state: st.session_state.jour_clique = None
 if 'mode_edition_presence' not in st.session_state: st.session_state.mode_edition_presence = False
 if 'query_recherche_active' not in st.session_state: st.session_state.query_recherche_active = ""
 
-def set_jour(jour): st.session_state.jour_clique = jour
-
 def calc_worker_days_period(p_data, nom_ouv, start_d=None, end_d=None):
     total_d = 0.0
     for d_str, j_info in p_data["jours"].items():
@@ -160,30 +162,20 @@ def calc_worker_days_period(p_data, nom_ouv, start_d=None, end_d=None):
     return total_d
 
 # =========================================================================
-# دالة عبقرية لتحويل الحروف العربية إلى رموز HTML الرقمية لضمان فتحها 100% في أي Excel
+# دالة تصدير Excel المضمونة 100% بالعربية
 # =========================================================================
 def texte_vers_excel_safe(val):
     s = str(val)
-    res = []
-    for ch in s:
-        if ord(ch) > 127:
-            res.append(f"&#{ord(ch)};")
-        else:
-            res.append(ch)
-    return "".join(res)
+    return "".join(f"&#{ord(ch)};" if ord(ch) > 127 else ch for ch in s)
 
 def generer_fichier_excel_garanti(df, titre):
     titre_safe = texte_vers_excel_safe(titre)
     html = f"""<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    </head>
+    <head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head>
     <body dir="rtl">
     <h2 style="text-align:center; color:#d32f2f; font-family:Arial;">{titre_safe}</h2>
     <table border="1" style="border-collapse:collapse; width:100%; font-family:Arial; font-size:14px; text-align:center;">
-        <thead>
-            <tr style="background-color:#2e7d32; color:#ffffff; font-weight:bold; height:35px;">
-    """
+        <thead><tr style="background-color:#2e7d32; color:#ffffff; font-weight:bold; height:35px;">"""
     for col in df.columns:
         html += f"<th style='padding:8px; background-color:#2e7d32; color:#ffffff;'>{texte_vers_excel_safe(col)}</th>"
     html += "</tr></thead><tbody>"
@@ -336,7 +328,7 @@ with st.sidebar.expander("➕ إضافة عامل جديد"):
         }
         save_db(base_donnees_projets); st.rerun()
 
-# 3. تحليل Agent IA للأشغال والبنود في اليسار
+# 3. تحليل Agent IA للأشغال والبنود + محرك المردودية والتنبؤ بالتأخير (IA Rendement & Prédiction)
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 تحليل Agent IA للأشغال والبنود")
 articles_disponibles = [a for a in p_data["articles"].keys() if match_smart(a, query_actuelle)]
@@ -354,14 +346,21 @@ if article_selectionne and article_selectionne != "":
     st.sidebar.write(f"⚡ **إنجاز الجمعة:** {tache_trouvee['fait_semaine']} {unite_a}")
     reste = max(tache_trouvee['objectif'] - tache_trouvee['fait_total'], 0.0)
     st.sidebar.write(f"⏳ **المتبقي بالعقد:** {reste} {unite_a}")
+    
+    if reste > 0 and tache_trouvee['fait_semaine'] > 0:
+        semaines_restantes = round(reste / tache_trouvee['fait_semaine'], 1)
+        date_fin_estimee = date.today() + timedelta(days=int(semaines_restantes * 7))
+        st.sidebar.info(f"🤖 **توقع IA للانتهاء:** بعد **{semaines_restantes} أسبوع** (حوالي **{date_fin_estimee.isoformat()}**)")
 
-# 4. التنزيل المباشر بصيغة Excel مضمون 100% (بترميز رقمي لا يخطئ أبداً في الإكسيل)
+# 4. التنزيل بصيغة Excel + درع حماية البيانات (Backup & Restore JSON)
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📥 التنزيل بصيغة Excel (Google Drive)")
+st.sidebar.markdown("### 📥 التنزيل بصيغة Excel ودرع الحماية")
 
 data_ouv_export = []
+cout_total_semaine = 0.0
 for k_o, v_o in p_data["ouvriers"].items():
     js = sum(float(x) for x in v_o.get("semaine", {}).values())
+    cout_total_semaine += js * v_o["taux_jour"]
     dc = date.fromisoformat(v_o.get("date_cloture", p_data["date_debut"]))
     jd = calc_worker_days_period(p_data, k_o, dc, date.today())
     ja = js + jd
@@ -406,6 +405,28 @@ st.sidebar.download_button(
     mime="application/vnd.ms-excel",
     use_container_width=True
 )
+
+# 🛡️ الميزة 1: درع حماية البيانات (Backup & Restore JSON)
+with st.sidebar.expander("🛡️ درع حماية البيانات (Backup & Restore)"):
+    json_backup_bytes = json.dumps(base_donnees_projets, ensure_ascii=False, indent=2).encode("utf-8")
+    st.download_button(
+        label="💾 تحميل نسخة احتياطية كاملة (Backup)",
+        data=json_backup_bytes,
+        file_name=f"HO_Batiment_Backup_{date.today().isoformat()}.json",
+        mime="application/json",
+        use_container_width=True
+    )
+    fichier_restore = st.file_uploader("🔄 استرجاع البيانات:", type=["json"], key="rest_json")
+    if fichier_restore is not None:
+        if st.button("✅ تأكيد استرجاع البيانات", use_container_width=True):
+            try:
+                data_restored = json.loads(fichier_restore.getvalue().decode("utf-8"))
+                st.session_state.db = data_restored
+                save_db(data_restored)
+                st.success("تم استرجاع كل البيانات بنجاح!")
+                st.rerun()
+            except Exception:
+                st.error("ملف غير صالح.")
 
 
 # ==========================================
@@ -475,6 +496,22 @@ with st.expander("📱 **مركز التحكم السريع (حضور الخدا
             p_data["articles"][art_m]["fait_total"] += qty_a
             p_data["articles"][art_m]["fait_semaine"] += qty_a
             save_db(base_donnees_projets); st.success("تمت الإضافة!")
+            
+        # 📉 الميزة 2: محرك المردودية والتنبؤ بالتأخير (IA Rendement & Prédiction)
+        info_a = p_data["articles"][art_m]
+        reste_a = max(info_a["objectif"] - info_a["fait_total"], 0.0)
+        sem_a = info_a.get("fait_semaine", 0.0)
+        u_a = info_a["unite"]
+        if sem_a > 0:
+            sem_rest = round(reste_a / sem_a, 1)
+            d_fin_prev = date.today() + timedelta(days=int(sem_rest * 7))
+            cout_unitaire_est = round(cout_total_semaine / sem_a, 2) if cout_total_semaine > 0 else 0
+            st.markdown(f"""<div class='ai-box'>
+            📉 <b>محرك المردودية والتنبؤ بالتأخير (IA Rendement & Prédiction) لبند [{art_m}]:</b><br>
+            • <b>نسق الإنجاز الأسبوعي:</b> {sem_a} {u_a} / أسبوع | <b>المتبقي بالعقد:</b> {reste_a} {u_a}<br>
+            • <b>المدة المتبقية لإنهاء البند:</b> {sem_rest} أسبوع (التاريخ المتوقع للانتهاء: <b>{d_fin_prev.isoformat()}</b>)<br>
+            • <b>تكلفة اليد العاملة للأسبوع مقارنة بالإنتاج:</b> إجمالي أجور الأسبوع ({cout_total_semaine} د) ما يعادل <b>{cout_unitaire_est} د لكل {u_a}</b> منجز.
+            </div>""", unsafe_allow_html=True)
 
     with tab_jour:
         cj1, cj2, cj3 = st.columns(3)
