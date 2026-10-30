@@ -3,6 +3,7 @@ import calendar
 from datetime import date, timedelta
 import os
 import json
+import copy
 import pandas as pd
 
 calendar.setfirstweekday(calendar.MONDAY)
@@ -17,6 +18,7 @@ st.markdown("""
     input[type="checkbox"] { transform: scale(1.3); accent-color: #28a745 !important; cursor: pointer; }
     .worker-row { background-color: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid #28a745; }
     .ai-box { background-color: #eef6ff; border-right: 4px solid #1976D2; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
+    .hist-box { background-color: #fffdf5; border: 1px solid #ffe082; padding: 8px; border-radius: 6px; margin-top: 5px; font-size: 13px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -90,20 +92,32 @@ ALL_ARTICLES_DEFAULT = {
 }
 
 ALL_OUVRIERS_DEFAULT = {
-    "بشير بن حميد": {"specialite": "رئيس مجموعة / بناي", "tel": "99 888 777", "taux_jour": 65.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 400.0, "paye_total": 2500.0, "semaine": {}},
-    "صالح بن عمار": {"specialite": "بناي محترف", "tel": "98 123 456", "taux_jour": 60.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 500.0, "paye_total": 3000.0, "semaine": {}},
-    "الهادي العياري": {"specialite": "مانوفري", "tel": "22 345 678", "taux_jour": 40.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 300.0, "paye_total": 1500.0, "semaine": {}},
-    "جمعة المجبري": {"specialite": "رئيس فريق", "tel": "55 789 012", "taux_jour": 70.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 200.0, "paye_total": 1500.0, "semaine": {}},
-    "علي الطرابلسي": {"specialite": "بناي", "tel": "24 567 890", "taux_jour": 60.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 100.0, "paye_total": 1000.0, "semaine": {}}
+    "بشير بن حميد": {"specialite": "رئيس مجموعة / بناي", "tel": "99 888 777", "taux_jour": 65.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 400.0, "paye_total": 2500.0, "semaine": {}, "historique_avances": [], "historique_clotures": []},
+    "صالح بن عمار": {"specialite": "بناي محترف", "tel": "98 123 456", "taux_jour": 60.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 500.0, "paye_total": 3000.0, "semaine": {}, "historique_avances": [], "historique_clotures": []},
+    "الهادي العياري": {"specialite": "مانوفري", "tel": "22 345 678", "taux_jour": 40.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 300.0, "paye_total": 1500.0, "semaine": {}, "historique_avances": [], "historique_clotures": []},
+    "جمعة المجبري": {"specialite": "رئيس فريق", "tel": "55 789 012", "taux_jour": 70.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 200.0, "paye_total": 1500.0, "semaine": {}, "historique_avances": [], "historique_clotures": []},
+    "علي الطرابلسي": {"specialite": "بناي", "tel": "24 567 890", "taux_jour": 60.0, "statut": "نشط", "date_cloture": "2026-05-18", "avances": 100.0, "paye_total": 1000.0, "semaine": {}, "historique_avances": [], "historique_clotures": []}
 }
+
+def creer_structure_projet_vierge():
+    ouv_copy = copy.deepcopy(ALL_OUVRIERS_DEFAULT)
+    art_copy = copy.deepcopy(ALL_ARTICLES_DEFAULT)
+    return {
+        "date_debut": "2026-05-18",
+        "stats": {"vert": 0, "jaune": 0, "gris": 0, "meteo": 0, "conge": 0},
+        "jours": {}, "photos_chantier": [], "models_3d": [], "plans_ia": [],
+        "ouvriers": ouv_copy, "articles": art_copy
+    }
 
 default_db = {
     "خليج الشعرة (Khalij Chaara)": {
         "date_debut": "2026-05-18",
         "stats": {"vert": 65, "jaune": 44, "gris": 12, "meteo": 8, "conge": 5},
         "jours": {}, "photos_chantier": [], "models_3d": [], "plans_ia": [],
-        "ouvriers": ALL_OUVRIERS_DEFAULT, "articles": ALL_ARTICLES_DEFAULT
-    }
+        "ouvriers": copy.deepcopy(ALL_OUVRIERS_DEFAULT),
+        "articles": copy.deepcopy(ALL_ARTICLES_DEFAULT)
+    },
+    "بوخروف (Boukhorouf)": creer_structure_projet_vierge()
 }
 
 def load_db():
@@ -111,40 +125,42 @@ def load_db():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                proj_key = "خليج الشعرة (Khalij Chaara)"
-                if proj_key not in data: data = default_db
-                else: data = {proj_key: data[proj_key]}
-                p = data[proj_key]
-                p.setdefault("ouvriers", {})
-                p.setdefault("articles", {})
-                p.setdefault("photos_chantier", [])
-                p.setdefault("models_3d", [])
-                p.setdefault("plans_ia", [])
-                for k_art, v_art in ALL_ARTICLES_DEFAULT.items():
-                    if k_art not in p["articles"]: p["articles"][k_art] = v_art
-                for k_ouv, v_ouv in ALL_OUVRIERS_DEFAULT.items():
-                    if k_ouv not in p["ouvriers"]: p["ouvriers"][k_ouv] = v_ouv
-                for o_k, o_v in p["ouvriers"].items():
-                    o_v.setdefault("statut", "نشط")
-                    o_v.setdefault("date_cloture", p["date_debut"])
-                    o_v.setdefault("tel", "99 000 000")
-                    o_v.setdefault("semaine", {j: 0.0 for j in jours_semaine_noms})
+                for p_default in ["خليج الشعرة (Khalij Chaara)", "بوخروف (Boukhorouf)"]:
+                    if p_default not in data:
+                        data[p_default] = copy.deepcopy(default_db[p_default])
+                for p_key, p in data.items():
+                    p.setdefault("date_debut", "2026-05-18")
+                    p.setdefault("jours", {})
+                    p.setdefault("ouvriers", {})
+                    p.setdefault("articles", {})
+                    p.setdefault("photos_chantier", [])
+                    p.setdefault("models_3d", [])
+                    p.setdefault("plans_ia", [])
+                    for k_art, v_art in ALL_ARTICLES_DEFAULT.items():
+                        if k_art not in p["articles"]: p["articles"][k_art] = copy.deepcopy(v_art)
+                    for k_ouv, v_ouv in ALL_OUVRIERS_DEFAULT.items():
+                        if k_ouv not in p["ouvriers"]: p["ouvriers"][k_ouv] = copy.deepcopy(v_ouv)
+                    for o_k, o_v in p["ouvriers"].items():
+                        o_v.setdefault("statut", "نشط")
+                        o_v.setdefault("date_cloture", p["date_debut"])
+                        o_v.setdefault("tel", "99 000 000")
+                        o_v.setdefault("semaine", {j: 0.0 for j in jours_semaine_noms})
+                        o_v.setdefault("historique_avances", [])
+                        o_v.setdefault("historique_clotures", [])
                 return data
-        except Exception: pass
-    return default_db
+        except Exception:
+            pass
+    return copy.deepcopy(default_db)
 
 def save_db(db_data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f: json.dump(db_data, f, ensure_ascii=False, indent=2)
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(db_data, f, ensure_ascii=False, indent=2)
 
 if "db" not in st.session_state:
     st.session_state.db = load_db()
     save_db(st.session_state.db)
 
 base_donnees_projets = st.session_state.db
-projet_choisi = "خليج الشعرة (Khalij Chaara)"
-p_data = base_donnees_projets[projet_choisi]
-donnees_chantier = p_data["jours"]
-date_debut = date.fromisoformat(p_data["date_debut"])
 
 if 'jour_clique' not in st.session_state: st.session_state.jour_clique = None
 if 'mode_edition_presence' not in st.session_state: st.session_state.mode_edition_presence = False
@@ -212,8 +228,22 @@ if not logo_path:
         with open("uploads/logo_saved.jpg", "wb") as f: f.write(up_logo.getbuffer())
         st.rerun()
 
+# 🏗️ التطوير 3: التبديل السريع بين الحضائر (خليج الشعرة و بوخروف)
 st.sidebar.markdown("---")
-st.sidebar.info(f"📂 **المشروع:** {projet_choisi}")
+liste_projets = list(base_donnees_projets.keys())
+projet_choisi = st.sidebar.selectbox("📂 اختر الحضيرة / المشروع:", liste_projets)
+
+with st.sidebar.expander("➕ فتح حضيرة / مشروع جديد"):
+    nv_proj_nom = st.text_input("اسم المشروع الجديد:")
+    if st.button("✅ إنشاء المشروع", use_container_width=True) and nv_proj_nom.strip():
+        if nv_proj_nom.strip() not in base_donnees_projets:
+            base_donnees_projets[nv_proj_nom.strip()] = creer_structure_projet_vierge()
+            save_db(base_donnees_projets)
+            st.rerun()
+
+p_data = base_donnees_projets[projet_choisi]
+donnees_chantier = p_data["jours"]
+date_debut = date.fromisoformat(p_data["date_debut"])
 
 # 1. البحث المتقدم
 st.sidebar.markdown("---")
@@ -241,7 +271,7 @@ elif filtre_temps == "بين تاريخين":
     d_debut_f = c1.date_input("من:", value=date_debut)
     d_fin_f = c2.date_input("إلى:", value=date.today())
 
-# 2. ملفات الخدامة وحسابات Agent IA في اليسار
+# 2. ملفات الخدامة وحسابات Agent IA في اليسار + سجل الدفعات المالي
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 👷 ملفات الخدامة وحسابات Agent IA")
 liste_ouv_filtree = [k for k in p_data["ouvriers"].keys() if match_smart(k, query_actuelle)]
@@ -300,6 +330,25 @@ if ouvrier_choisi and ouvrier_choisi != "":
     else:
         st.sidebar.error(f"🔵 الخدام خالص، وتسالو تسبقة زايدة: **{solde} د** (بالسالب)")
 
+    # 💵 التطوير 2: عرض سجل الدفعات والآفونس والخلاصات السابقة
+    with st.sidebar.expander("📜 سجل الدفعات والخلاصات (Historique)"):
+        st.markdown("**💵 التسبقات (Avances) في الفترة الحالية:**")
+        hist_av = o.get("historique_avances", [])
+        if hist_av:
+            for item_av in reversed(hist_av):
+                st.markdown(f"<div class='hist-box'>📅 {item_av['date']} : <b>{item_av['montant']} د</b> ({item_av.get('note', '-')})</div>", unsafe_allow_html=True)
+        else:
+            st.caption("لا توجد دفعات مسجلة في هذه الفترة.")
+            
+        st.markdown("---")
+        st.markdown("**🔒 أرشيف الخلاصات السابقة (Clôtures):**")
+        hist_cl = o.get("historique_clotures", [])
+        if hist_cl:
+            for item_cl in reversed(hist_cl):
+                st.markdown(f"<div class='hist-box'>✅ {item_cl['date']} | أيام: {item_cl['jours']} | مستحق: {item_cl['salaire']} د | تسبقات: {item_cl['avances']} د | الصافي: <b>{item_cl['solde']} د</b></div>", unsafe_allow_html=True)
+        else:
+            st.caption("لا يوجد أرشيف خلاص سابق.")
+
     st.sidebar.markdown("⚙️ **إدارة عمل الخدام:**")
     col_act1, col_act2 = st.sidebar.columns(2)
     with col_act1:
@@ -311,9 +360,21 @@ if ouvrier_choisi and ouvrier_choisi != "":
                 o["statut"] = "نشط"; save_db(base_donnees_projets); st.rerun()
     with col_act2:
         if st.button("🔒 خلاص ووقف الحساب", key=f"close_{ouvrier_choisi}", use_container_width=True):
+            o.setdefault("historique_clotures", []).append({
+                "date": date.today().isoformat(),
+                "jours": total_jours_depuis_cloture,
+                "salaire": salaire_merite_periode,
+                "avances": o["avances"],
+                "solde": solde
+            })
             if solde > 0: o["paye_total"] = o.get("paye_total", 0.0) + solde + o["avances"]
-            o["avances"] = 0.0; o["semaine"] = {j: 0.0 for j in jours_semaine_noms}; o["date_cloture"] = date.today().isoformat()
-            save_db(base_donnees_projets); st.sidebar.success("تم غلق الحساب وتصفير الفترة!"); st.rerun()
+            o["avances"] = 0.0
+            o["historique_avances"] = []
+            o["semaine"] = {j: 0.0 for j in jours_semaine_noms}
+            o["date_cloture"] = date.today().isoformat()
+            save_db(base_donnees_projets)
+            st.sidebar.success("تم غلق الحساب وأرشفته وتصفير الفترة!")
+            st.rerun()
 
 with st.sidebar.expander("➕ إضافة عامل جديد"):
     nom_nv = st.text_input("اسم ولقب الخدام:", key="nv_nom")
@@ -324,7 +385,8 @@ with st.sidebar.expander("➕ إضافة عامل جديد"):
     if st.button("✅ حفظ العامل الجديد", use_container_width=True) and nom_nv.strip():
         p_data["ouvriers"][nom_nv.strip()] = {
             "specialite": spec_nv or "عامل", "tel": tel_nv or "-", "taux_jour": taux_nv, "statut": statut_nv,
-            "date_cloture": date.today().isoformat(), "paye_total": 0.0, "avances": 0.0, "semaine": {j: 0.0 for j in jours_semaine_noms}
+            "date_cloture": date.today().isoformat(), "paye_total": 0.0, "avances": 0.0,
+            "semaine": {j: 0.0 for j in jours_semaine_noms}, "historique_avances": [], "historique_clotures": []
         }
         save_db(base_donnees_projets); st.rerun()
 
@@ -367,10 +429,12 @@ for k_o, v_o in p_data["ouvriers"].items():
     mo = ja * v_o["taux_jour"]
     av = v_o.get("avances", 0.0)
     re = mo - av
+    details_av_str = " | ".join([f"{x['date']}: {x['montant']}د" for x in v_o.get("historique_avances", [])]) or "-"
     data_ouv_export.append({
         "الخدام": k_o, "الاختصاص": v_o["specialite"], "الهاتف": v_o.get("tel", "-"),
         "الوضعية": v_o.get("statut", "نشط"), "تاريخ آخر خلاص": v_o.get("date_cloture", "-"),
-        "أيام العمل": ja, "اليومية (د)": v_o["taux_jour"], "المستحق (د)": mo, "الآفونس (د)": av, "الصافي الباقي (د)": re
+        "أيام العمل": ja, "اليومية (د)": v_o["taux_jour"], "المستحق (د)": mo,
+        "الآفونس الجملي (د)": av, "تفاصيل الدفعات": details_av_str, "الصافي الباقي (د)": re
     })
 df_export_ouv = pd.DataFrame(data_ouv_export)
 xls_ouv_garanti = generer_fichier_excel_garanti(df_export_ouv, f"تقرير أجور ومالية العمال - {projet_choisi}")
@@ -378,7 +442,7 @@ xls_ouv_garanti = generer_fichier_excel_garanti(df_export_ouv, f"تقرير أج
 st.sidebar.download_button(
     label="📥 تنزيل جدول أجور العمال (Excel مصلح 100%)",
     data=xls_ouv_garanti,
-    file_name=f"Tableau_Ouvriers_{date.today().isoformat()}.xls",
+    file_name=f"Tableau_Ouvriers_{projet_choisi[:10]}_{date.today().isoformat()}.xls",
     mime="application/vnd.ms-excel",
     use_container_width=True
 )
@@ -401,12 +465,12 @@ xls_art_garanti = generer_fichier_excel_garanti(df_export_art, f"تقرير تق
 st.sidebar.download_button(
     label="📥 تنزيل جدول الأشغال والتقدم (Excel مصلح 100%)",
     data=xls_art_garanti,
-    file_name=f"Tableau_Articles_{date.today().isoformat()}.xls",
+    file_name=f"Tableau_Articles_{projet_choisi[:10]}_{date.today().isoformat()}.xls",
     mime="application/vnd.ms-excel",
     use_container_width=True
 )
 
-# 🛡️ الميزة 1: درع حماية البيانات (Backup & Restore JSON)
+# 🛡️ درع حماية البيانات (Backup & Restore JSON)
 with st.sidebar.expander("🛡️ درع حماية البيانات (Backup & Restore)"):
     json_backup_bytes = json.dumps(base_donnees_projets, ensure_ascii=False, indent=2).encode("utf-8")
     st.download_button(
@@ -436,7 +500,7 @@ st.title(f"🤖 H.O Bâtiment — {projet_choisi}")
 
 with st.expander("📱 **مركز التحكم السريع (حضور الخدامة، الأشغال، يوميات، صور متعددة، 3D، وبلانات)**", expanded=True):
     tab_ouv, tab_art, tab_jour, tab_photos, tab_3d, tab_plans = st.tabs([
-        "👷 1. حضور الخدامة", "🧱 2. الأشغال", "📅 3. يوميات الشانطي", "📸 4. صور متعددة", "🏢 5. تصاور 3D", "📐 6. البلانات"
+        "👷 1. حضور الخدامة والدفعات", "🧱 2. الأشغال والمردودية", "📅 3. يوميات الشانطي", "📸 4. أرشيف الصور", "🏢 5. معرض 3D", "📐 6. البلانات"
     ])
     
     with tab_ouv:
@@ -469,7 +533,7 @@ with st.expander("📱 **مركز التحكم السريع (حضور الخدا
             tot_s = 0.0
             for idx_j, js in enumerate(jours_semaine_noms):
                 pres = float(info_ouv.get("semaine", {}).get(js, 0.0)) >= 0.5
-                val = cols_c[idx_j].checkbox(f"{js}", value=pres, key=f"chk_mob_{nom_ouv}_{js}", disabled=(not st.session_state.mode_edition_presence))
+                val = cols_c[idx_j].checkbox(f"{js}", value=pres, key=f"chk_mob_{projet_choisi}_{nom_ouv}_{js}", disabled=(not st.session_state.mode_edition_presence))
                 v_num = 1.0 if val else 0.0
                 if info_ouv["semaine"].get(js, 0.0) != v_num:
                     info_ouv["semaine"][js] = v_num; chg = True
@@ -479,14 +543,28 @@ with st.expander("📱 **مركز التحكم السريع (حضور الخدا
         if chg and st.session_state.mode_edition_presence:
             save_db(base_donnees_projets)
 
-        st.markdown("##### 💰 **تسجيل آفونس (Avance) أو خلاص جديد:**")
-        c_av1, c_av2, c_av3 = st.columns(3)
+        st.markdown("##### 💰 **تسجيل آفونس (Avance) جديد بالتاريخ والملاحظة:**")
+        c_av1, c_av2, c_av3, c_av4 = st.columns([2, 1.5, 2, 1.5])
         with c_av1: ouv_m = st.selectbox("الخدام:", list(p_data["ouvriers"].keys()), key="mob_ouv")
         with c_av2: av_p = st.number_input("المبلغ (د):", min_value=0.0, step=10.0, key="mob_av")
-        with c_av3:
+        with c_av3: note_av = st.text_input("ملاحظة الدفعة (اختياري):", placeholder="تسبقة أسبوعية، مصروف...", key="mob_av_note")
+        with c_av4:
             st.write("")
             if st.button("💵 تسجيل آفونس", use_container_width=True) and av_p > 0:
-                p_data["ouvriers"][ouv_m]["avances"] += av_p; save_db(base_donnees_projets); st.success("تم تسجيل الآفونس!")
+                p_data["ouvriers"][ouv_m]["avances"] += av_p
+                p_data["ouvriers"][ouv_m].setdefault("historique_avances", []).append({
+                    "date": date.today().isoformat(),
+                    "montant": av_p,
+                    "note": note_av.strip() or "تسبقة"
+                })
+                save_db(base_donnees_projets)
+                st.success(f"تم تسجيل {av_p} د لـ {ouv_m} وحفظها في السجل!")
+                st.rerun()
+
+        # عرض سريع لآخر الدفعات المسجلة للعامل المختار
+        hist_ouv_sel = p_data["ouvriers"][ouv_m].get("historique_avances", [])
+        if hist_ouv_sel:
+            st.caption(f"📜 **آخر دفعات {ouv_m} منذ آخر خلاص:** " + " | ".join([f"({x['date']}: {x['montant']} د - {x.get('note','')})" for x in hist_ouv_sel[-4:]]))
 
     with tab_art:
         ca1, ca2 = st.columns(2)
@@ -496,8 +574,9 @@ with st.expander("📱 **مركز التحكم السريع (حضور الخدا
             p_data["articles"][art_m]["fait_total"] += qty_a
             p_data["articles"][art_m]["fait_semaine"] += qty_a
             save_db(base_donnees_projets); st.success("تمت الإضافة!")
+            st.rerun()
             
-        # 📉 الميزة 2: محرك المردودية والتنبؤ بالتأخير (IA Rendement & Prédiction)
+        # 📉 محرك المردودية والتنبؤ بالتأخير (IA Rendement & Prédiction)
         info_a = p_data["articles"][art_m]
         reste_a = max(info_a["objectif"] - info_a["fait_total"], 0.0)
         sem_a = info_a.get("fait_semaine", 0.0)
@@ -523,31 +602,104 @@ with st.expander("📱 **مركز التحكم السريع (حضور الخدا
             donnees_chantier[d_mob.isoformat()] = {"etat": et_mob[0], "visite_note": vis_mob.strip(), "details": {"travail": nt_mob or et_mob[1]}, "presences": {}, "avancement": {}}
             save_db(base_donnees_projets); st.success("تم التسجيل!")
 
+    # 📸 التطوير 1: أرشفة الصور وتصنيفها الذكي حسب البند مع المعاينة الحية والحذف
     with tab_photos:
-        st.markdown("📸 **رفع عدة صور في نفس الوقت:**")
-        up_imgs = st.file_uploader("اختر الصور:", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
-        if st.button("✅ حفظ الصور", use_container_width=True) and up_imgs:
+        st.markdown("📸 **رفع وأرشفة صور الشانطي حسب البند:**")
+        cp1, cp2, cp3 = st.columns([2, 1.5, 1.5])
+        with cp1:
+            up_imgs = st.file_uploader("اختر الصور:", type=["jpg", "png", "jpeg"], accept_multiple_files=True, key="up_ph_chantier")
+        with cp2:
+            art_photo = st.selectbox("ربط الصور بالبند:", ["عام / الشانطي"] + list(p_data["articles"].keys()), key="sel_art_ph")
+        with cp3:
+            desc_photo = st.text_input("وصف أو ملاحظة الصورة:", placeholder="مثال: انتهاء أشغال الواجهة...")
+            
+        if st.button("✅ حفظ الصور في الأرشيف", use_container_width=True) and up_imgs:
             for img in up_imgs:
-                fn = f"uploads/chantier_photos/{date.today().isoformat()}_{len(p_data['photos_chantier'])+1}.jpg"
+                fn = f"uploads/chantier_photos/{date.today().isoformat()}_{len(p_data['photos_chantier'])+1}_{img.name}"
                 with open(fn, "wb") as f: f.write(img.getbuffer())
-                p_data["photos_chantier"].append({"date": date.today().isoformat(), "article": "شانطي", "desc": "صورة", "path": fn})
-            save_db(base_donnees_projets); st.success("تم حفظ الصور بنجاح!")
+                p_data["photos_chantier"].append({
+                    "date": date.today().isoformat(),
+                    "article": art_photo,
+                    "desc": desc_photo.strip() or "صورة ميدانية",
+                    "path": fn
+                })
+            save_db(base_donnees_projets)
+            st.success("تم حفظ الصور في الأرشيف بنجاح!")
+            st.rerun()
+
+        if p_data["photos_chantier"]:
+            st.markdown("---")
+            filtre_ph_art = st.selectbox("🔍 فلترة معرض الصور حسب البند:", ["الكل", "عام / الشانطي"] + list(p_data["articles"].keys()), key="flt_ph")
+            photos_a_afficher = [
+                (idx, ph) for idx, ph in enumerate(p_data["photos_chantier"])
+                if filtre_ph_art == "الكل" or ph.get("article") == filtre_ph_art
+            ]
+            if photos_a_afficher:
+                cols_ph = st.columns(4)
+                for i_card, (orig_idx, ph_info) in enumerate(reversed(photos_a_afficher)):
+                    with cols_ph[i_card % 4]:
+                        if os.path.exists(ph_info["path"]):
+                            st.image(ph_info["path"], use_container_width=True)
+                        st.caption(f"📅 {ph_info['date']} | 🧱 **{ph_info.get('article','-')}**\n📝 {ph_info.get('desc','-')}")
+                        if st.button("🗑️ حذف", key=f"del_ph_{projet_choisi}_{orig_idx}", use_container_width=True):
+                            p_data["photos_chantier"].pop(orig_idx)
+                            save_db(base_donnees_projets)
+                            st.rerun()
+            else:
+                st.info("لا توجد صور مسجلة لهذا البند حالياً.")
 
     with tab_3d:
-        st.markdown("🏢 **معرض 3D**")
-        img_3d = st.file_uploader("صورة 3D:", type=["jpg", "png", "jpeg"])
-        if st.button("حفظ 3D", use_container_width=True) and img_3d:
-            fn = f"uploads/3d_models/3d_{len(p_data['models_3d'])+1}.jpg"
+        st.markdown("🏢 **معرض التصاميم ثلاثية الأبعاد (3D)**")
+        c3d_1, c3d_2 = st.columns(2)
+        with c3d_1: img_3d = st.file_uploader("صورة 3D:", type=["jpg", "png", "jpeg"], key="up_3d")
+        with c3d_2:
+            titre_3d = st.text_input("عنوان التصميم 3D:", placeholder="مثال: منظور عام للمشروع")
+            zone_3d = st.text_input("المنطقة / الزون:", placeholder="مثال: المدخل الرئيسي")
+        if st.button("✅ حفظ التصميم 3D", use_container_width=True) and img_3d:
+            fn = f"uploads/3d_models/3d_{len(p_data['models_3d'])+1}_{img_3d.name}"
             with open(fn, "wb") as f: f.write(img_3d.getbuffer())
-            p_data["models_3d"].append({"titre": "تصميم", "zone": "-", "path": fn}); save_db(base_donnees_projets); st.success("تمت الإضافة!")
+            p_data["models_3d"].append({"titre": titre_3d or "تصميم 3D", "zone": zone_3d or "-", "path": fn})
+            save_db(base_donnees_projets); st.success("تمت الإضافة!"); st.rerun()
+
+        if p_data["models_3d"]:
+            st.markdown("---")
+            cols_3d = st.columns(3)
+            for idx_3d, m3d in enumerate(p_data["models_3d"]):
+                with cols_3d[idx_3d % 3]:
+                    if os.path.exists(m3d["path"]):
+                        st.image(m3d["path"], use_container_width=True)
+                    st.caption(f"🏢 **{m3d.get('titre','-')}** (المنطقة: {m3d.get('zone','-')})")
+                    if st.button("🗑️ حذف التصميم", key=f"del_3d_{projet_choisi}_{idx_3d}", use_container_width=True):
+                        p_data["models_3d"].pop(idx_3d)
+                        save_db(base_donnees_projets)
+                        st.rerun()
 
     with tab_plans:
-        st.markdown("📐 **البلانات**")
-        img_pl = st.file_uploader("صورة البلان:", type=["jpg", "png", "jpeg"])
-        if st.button("حفظ البلان", use_container_width=True) and img_pl:
-            fn = f"uploads/plans/plan_{len(p_data['plans_ia'])+1}.jpg"
+        st.markdown("📐 **أرشيف البلانات والمخططات الهندسية**")
+        cpl_1, cpl_2, cpl_3 = st.columns([2, 1.5, 1.5])
+        with cpl_1: img_pl = st.file_uploader("صورة البلان:", type=["jpg", "png", "jpeg"], key="up_plan")
+        with cpl_2: nom_pl = st.text_input("اسم البلان:", placeholder="مثال: مخطط شبكة الصرف...")
+        with cpl_3: art_pl = st.selectbox("البند المرتبط بالبلان:", ["عام"] + list(p_data["articles"].keys()), key="sel_art_pl")
+        note_pl = st.text_input("ملاحظات فنية / أبعاد مستخرجة من البلان:", key="note_pl_in")
+        
+        if st.button("✅ حفظ البلان", use_container_width=True) and img_pl:
+            fn = f"uploads/plans/plan_{len(p_data['plans_ia'])+1}_{img_pl.name}"
             with open(fn, "wb") as f: f.write(img_pl.getbuffer())
-            p_data["plans_ia"].append({"nom": "بلان", "article": "عام", "synthese": "تحليل", "path": fn}); save_db(base_donnees_projets); st.success("تم الحفظ!")
+            p_data["plans_ia"].append({"nom": nom_pl or "بلان هندسي", "article": art_pl, "synthese": note_pl or "-", "path": fn})
+            save_db(base_donnees_projets); st.success("تم الحفظ!"); st.rerun()
+
+        if p_data["plans_ia"]:
+            st.markdown("---")
+            cols_pl = st.columns(3)
+            for idx_pl, pl_item in enumerate(p_data["plans_ia"]):
+                with cols_pl[idx_pl % 3]:
+                    if os.path.exists(pl_item["path"]):
+                        st.image(pl_item["path"], use_container_width=True)
+                    st.caption(f"📐 **{pl_item.get('nom','-')}** | البند: {pl_item.get('article','-')}\n📝 {pl_item.get('synthese','-')}")
+                    if st.button("🗑️ حذف البلان", key=f"del_pl_{projet_choisi}_{idx_pl}", use_container_width=True):
+                        p_data["plans_ia"].pop(idx_pl)
+                        save_db(base_donnees_projets)
+                        st.rerun()
 
 # ==========================================
 # الرزنامة التفاعلية (قلم التلوين السريع)
@@ -589,7 +741,7 @@ for m_num in range(date_debut.month, 13):
                     elif etat_j == "meteo": icon = f"🌧️{vis_j}"
                     elif etat_j == "conge": icon = f"🔵{vis_j}"
                     
-                    if cols[k].button(f"{icon} {j_num}", key=f"pinc_{d_str}", use_container_width=True):
+                    if cols[k].button(f"{icon} {j_num}", key=f"pinc_{projet_choisi}_{d_str}", use_container_width=True):
                         if mode_pinceau[0] == "delete":
                             if d_str in donnees_chantier: del donnees_chantier[d_str]
                         else:
